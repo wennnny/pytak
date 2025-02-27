@@ -45,7 +45,14 @@ async def main():
     adds your serializer to the asyncio task list.
     """
     config = ConfigParser()
-    config["mycottool"] = {"COT_URL": "tcp://takserver.example.com:8087"}
+    config["mycottool"] = {
+        "COT_URL": "tls://140.113.148.80:8089",
+        "PYTAK_TLS_CLIENT_CERT": "/home/weny/Downloads/TAK_Server_Configurator/tak-server/tak/certs/files/admin_cert.pem",
+        "PYTAK_TLS_CLIENT_KEY": "/home/weny/Downloads/TAK_Server_Configurator/tak-server/tak/certs/files/admin_key.pem",
+        "PYTAK_TLS_CA_CERT": "/home/weny/Downloads/TAK_Server_Configurator/tak-server/tak/certs/files/admin-trusted.pem",
+        "PYTAK_TLS_DONT_CHECK_HOSTNAME": "1",
+        "PYTAK_TLS_DONT_VERIFY": "1"
+    }
     config = config["mycottool"]
 
     # Initializes worker queues and tasks.
