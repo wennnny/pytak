@@ -2,11 +2,8 @@
 
 import asyncio
 import xml.etree.ElementTree as ET
-
+import pytak, uuid
 from configparser import ConfigParser
-
-import pytak
-
 
 class MySerializer(pytak.QueueWorker):
     """
@@ -22,21 +19,37 @@ class MySerializer(pytak.QueueWorker):
     async def run(self):
         """Run the loop for processing or generating pre-CoT data."""
         while True:
-            data = tak_pong()
+            data = generate_gps_cot()
+            self._logger.info("Sending:\n%s\n", data.decode())
             await self.handle_data(data)
-            await asyncio.sleep(20)
+            await asyncio.sleep(10)
 
 
-def tak_pong():
+def generate_gps_cot():
     """Generate a simple takPong CoT Event."""
     root = ET.Element("event")
     root.set("version", "2.0")
-    root.set("type", "t-x-d-d")
-    root.set("uid", "takPong")
+    root.set("type", "a-f-G-U-C-I")
+    root.set("uid", "test_20250301") 
     root.set("how", "m-g")
     root.set("time", pytak.cot_time())
     root.set("start", pytak.cot_time())
-    root.set("stale", pytak.cot_time(3600))
+    root.set("stale", pytak.cot_time(300))
+
+    gps_data = {
+        "lat": "24.784074",
+        "lon": "120.998384",
+        "hae": "999999",
+        "ce": "999999",
+        "le": "999999",
+    }
+    ET.SubElement(root, "point", attrib=gps_data)
+    detail = ET.SubElement(root, "detail")
+    ET.SubElement(detail, "takv", {"device": "MyDevice", "platform": "Python", "os": "Linux"})
+    ET.SubElement(detail, "contact", {"callsign": "MyDevice1"})
+    ET.SubElement(detail, "__group", {"name": "Purple", "role": "Team Member"})
+    ET.SubElement(detail, "uid", {"Droid": "my-tak-device"})
+
     return ET.tostring(root)
 
 
