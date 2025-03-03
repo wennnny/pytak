@@ -1,5 +1,20 @@
 ![ATAK Screenshot with PyTAK Logo.](https://pytak.readthedocs.io/en/stable/media/atak_screenshot_with_pytak_logo-x25.jpg)
 
+# Setup
+
+## Clone this repo
+
+```
+$ git clone --recursive git@github.com:wennnny/pytak.git
+```
+
+## Import certificate 
+
+```
+$ openssl pkcs12 -in < Pass to .p12 file > -out <yourname>_cert.pem -clcerts -nokeys
+$ openssl pkcs12 -in < Pass to .p12 file > -out <yourname>_key.pem -nocerts -nodes
+```
+
 # Python Team Awareness Kit
 
 PyTAK is a Python Module for creating Team Awareness Kit ([TAK](https://tak.gov)) clients, servers & gateways.
