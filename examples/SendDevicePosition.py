@@ -3,12 +3,15 @@
 import asyncio, uuid, socket, platform
 import xml.etree.ElementTree as ET
 import pytak
-import geocoder, sys
+import sys
 from configparser import ConfigParser
 
 DEVICE_CALLSIGN = socket.gethostname()
 DEVICE_UID = str(uuid.uuid4())
 DEVICE_OS = platform.system()
+SYNC_IP = "127.0.0.1"
+SYNC_PORT = 5005
+sync_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 for arg in sys.argv:
     if arg.startswith("callsign=:"):
@@ -40,7 +43,7 @@ def generate_gps_cot():
     # lat, lon = get_gps()
     gps_data = {
         "lat": "24.784074",
-        "lon": "120.998384",
+        "lon": "120.998052",
         "hae": "999999",
         "ce": "999999",
         "le": "999999",
@@ -72,13 +75,14 @@ class MySerializer(pytak.QueueWorker):
             data = generate_gps_cot()
             self._logger.info("Sending:\n%s\n", data.decode())
             await self.handle_data(data)
-            await asyncio.sleep(30)
+            await asyncio.sleep(5)
 
 class MyReceiver(pytak.QueueWorker):
     """Handle incoming CoT events."""
 
     async def handle_data(self, data):
         self._logger.info("[Received] CoT Event:\n%s\n", data.decode())
+        sync_socket.sendto(data, (SYNC_IP, SYNC_PORT))
 
     async def run(self):
         while True:
@@ -93,9 +97,9 @@ async def main():
     config = ConfigParser()
     config["mycottool"] = {
         "COT_URL": "tls://140.113.148.80:8089",
-        "PYTAK_TLS_CLIENT_CERT": "/home/wen/Downloads/user1_cert.pem",
-        "PYTAK_TLS_CLIENT_KEY": "/home/wen/Downloads/user1_key.pem",
-        "PYTAK_TLS_CA_CERT": "/home/wen/Downloads/user1-trusted.pem",
+        "PYTAK_TLS_CLIENT_CERT": "admin_cert.pem",
+        "PYTAK_TLS_CLIENT_KEY": "admin_key.pem",
+        "PYTAK_TLS_CA_CERT": "admin-trusted.pem",
         "PYTAK_TLS_DONT_CHECK_HOSTNAME": "1",
         "PYTAK_TLS_DONT_VERIFY": "1"
     }
