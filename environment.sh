@@ -24,4 +24,4 @@ fi
 # export MOOS_DIR="$HOME/moos-dawg-2024/svn-mirror"
 # export PATH=$PATH:$HOME/duckiepond-nctu/moos-ivp-taiwanMoos/bin
 # export PATH=$PATH:$HOME/moos-dawg-2024/moos/bin
-export MOOS_DIR=/home/moos-dawg/moos-dawg-2024/svn-mirror/build/MOOS/MOOSCore
+# export MOOS_DIR=/home/moos-dawg/moos-dawg-2024/svn-mirror/build/MOOS/MOOSCore
