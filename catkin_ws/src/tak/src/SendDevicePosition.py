@@ -4,6 +4,8 @@ import asyncio, uuid, socket, platform
 import xml.etree.ElementTree as ET
 import pytak
 import sys
+import rospy
+from sensor_msgs.msg import NavSatFix
 from configparser import ConfigParser
 
 DEVICE_CALLSIGN = socket.gethostname()
@@ -13,21 +15,22 @@ SYNC_IP = "127.0.0.1"
 SYNC_PORT = 5005
 sync_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+latest_gps = {"lat": None, "lon": None, "hae": None}
+
 for arg in sys.argv:
     if arg.startswith("callsign=:"):
         DEVICE_CALLSIGN = arg.split("=:")[1]
     if arg.startswith("uid=:"):
         DEVICE_UID = arg.split("=:")[1]
 
-# def get_gps():
-#     """Get GPS coordinates from the device."""
-#     g = geocoder.ip('me')
-#     if g.ok:
-#         lat, lon = g.latlng
-#         return str(lat), str(lon)
-#     else:
-#         print("Failed to get GPS coordinates.")
-#         return None, None
+def gps_callback(data):
+    global latest_gps
+    latest_gps["lat"] = data.latitude
+    latest_gps["lon"] = data.longitude
+    latest_gps["hae"] = data.altitude
+
+rospy.init_node('cot_sender', anonymous=True)
+rospy.Subscriber("/mavros/global_position/global", NavSatFix, gps_callback)
 
 def generate_gps_cot():
     """Generate a simple takPong CoT Event."""
@@ -42,9 +45,9 @@ def generate_gps_cot():
 
     # lat, lon = get_gps()
     gps_data = {
-        "lat": "24.784074",
-        "lon": "120.998052",
-        "hae": "999999",
+        "lat": str(latest_gps["lat"]),
+        "lon": str(latest_gps["lon"]),
+        "hae": str(latest_gps["hae"]),
         "ce": "999999",
         "le": "999999",
     }
@@ -71,11 +74,11 @@ class MySerializer(pytak.QueueWorker):
 
     async def run(self):
         """Run the loop for processing or generating pre-CoT data."""
-        while True:
+        while not rospy.is_shutdown():
             data = generate_gps_cot()
             self._logger.info("Sending:\n%s\n", data.decode())
             await self.handle_data(data)
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
 
 class MyReceiver(pytak.QueueWorker):
     """Handle incoming CoT events."""
