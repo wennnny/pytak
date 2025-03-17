@@ -10,7 +10,7 @@ SYNC_IP = "127.0.0.1"
 SYNC_PORT = 5005
 
 def parse_cot(xml_data):
-    """解析 CoT XML 並提取位置"""
+    """ Parse CoT XML data and return position and metadata """
     root = ET.fromstring(xml_data)
     point = root.find("point")
     
