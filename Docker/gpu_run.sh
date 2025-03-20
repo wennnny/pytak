@@ -8,7 +8,7 @@ TAG="ubuntu20.04-tak"
 IMG="${REPOSITORY}:${TAG}"
 
 USER_NAME="moos-dawg"
-REPO_NAME="Downloads/TAK_Server_Configurator/pytak"
+REPO_NAME="pytak"
 CONTAINER_NAME="moos-dawg-2024-ubuntu20.04-gpu"
 
 CONTAINER_ID=$(docker ps -aqf "ancestor=${IMG}")
