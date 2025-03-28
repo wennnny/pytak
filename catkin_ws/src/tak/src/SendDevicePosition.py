@@ -18,10 +18,10 @@ sync_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 latest_gps = {"lat": None, "lon": None, "hae": None}
 
 for arg in sys.argv:
-    if arg.startswith("callsign=:"):
-        DEVICE_CALLSIGN = arg.split("=:")[1]
-    if arg.startswith("uid=:"):
-        DEVICE_UID = arg.split("=:")[1]
+    if arg.startswith("callsign:="):
+        DEVICE_CALLSIGN = arg.split(":=")[1]
+    if arg.startswith("uid:="):
+        DEVICE_UID = arg.split(":=")[1]
 
 def gps_callback(data):
     global latest_gps
