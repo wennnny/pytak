@@ -34,6 +34,9 @@ rospy.Subscriber("/mavros/global_position/global", NavSatFix, gps_callback)
 
 def generate_gps_cot():
     """Generate a simple takPong CoT Event."""
+    if latest_gps["lat"] is None or latest_gps["lon"] is None:
+        return None
+
     root = ET.Element("event")
     root.set("version", "2.0")
     root.set("type", "a-f-G-U-C-I")
@@ -41,9 +44,8 @@ def generate_gps_cot():
     root.set("how", "m-g")
     root.set("time", pytak.cot_time())
     root.set("start", pytak.cot_time())
-    root.set("stale", pytak.cot_time(300))
+    root.set("stale", pytak.cot_time(10))
 
-    # lat, lon = get_gps()
     gps_data = {
         "lat": str(latest_gps["lat"]),
         "lon": str(latest_gps["lon"]),
@@ -73,12 +75,13 @@ class MySerializer(pytak.QueueWorker):
         await self.put_queue(event)
 
     async def run(self):
-        """Run the loop for processing or generating pre-CoT data."""
         while not rospy.is_shutdown():
             data = generate_gps_cot()
-            self._logger.info("Sending:\n%s\n", data.decode())
-            await self.handle_data(data)
+            if data:
+                self._logger.info("Sending:\n%s\n", data.decode())
+                await self.handle_data(data)
             await asyncio.sleep(1)
+
 
 class MyReceiver(pytak.QueueWorker):
     """Handle incoming CoT events."""
