@@ -9,7 +9,7 @@ SYNC_IP = "127.0.0.1"
 SYNC_PORT = 5005
 
 def argb_to_hex(argb_str):
-    """將 CoT 的 argb 整數字串轉為 #RRGGBB HEX 顏色碼"""
+    """ Convert ARGB string to hex color format. """
     try:
         value = int(argb_str)
         unsigned = value & 0xFFFFFFFF
