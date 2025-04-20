@@ -1,42 +1,66 @@
 #!/usr/bin/env python3
 
-import asyncio, uuid, socket, platform
+import asyncio, uuid, socket, platform, threading, struct, time
 import xml.etree.ElementTree as ET
 import pytak
-import sys, time
 import rospy
-from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import String
 from configparser import ConfigParser
 
-DEVICE_CALLSIGN = socket.gethostname()
 DEVICE_UID = str(uuid.uuid4())
 DEVICE_OS = platform.system()
 SYNC_IP = "127.0.0.1"
 SYNC_PORT = 5005
 sync_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-latest_gps = {"lat": None, "lon": None, "hae": None}
+UDP_LISTEN_IP = "0.0.0.0"
+UDP_LISTEN_PORT = 49152
+
+latest_gps = {"lat": None, "lon": None, "hae": 999999.0}
 latest_gps_time = 0
+ros_pub = None
 
-for arg in sys.argv:
-    if arg.startswith("callsign:="):
-        DEVICE_CALLSIGN = arg.split(":=")[1]
-    if arg.startswith("uid:="):
-        DEVICE_UID = arg.split(":=")[1]
 
-def gps_callback(data):
+def udp_listener():
     global latest_gps, latest_gps_time
-    latest_gps["lat"] = data.latitude
-    latest_gps["lon"] = data.longitude
-    latest_gps["hae"] = data.altitude
-    latest_gps_time = time.time()
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((UDP_LISTEN_IP, UDP_LISTEN_PORT))
+    print(f"[UDP] Listening for binary packets on {UDP_LISTEN_IP}:{UDP_LISTEN_PORT}...")
 
-rospy.init_node('cot_sender', anonymous=True)
-rospy.Subscriber("/mavros/global_position/global", NavSatFix, gps_callback)
+    while True:
+        data, _ = sock.recvfrom(1024)
+        if len(data) != 19:
+            print(f"[UDP] Invalid packet length: {len(data)}")
+            continue
+
+        header = data[0]
+        length = data[1]
+        if length != 16:
+            print(f"[UDP] Unexpected payload length: {length}")
+            continue
+
+        lat = struct.unpack('<d', data[2:10])[0]
+        lon = struct.unpack('<d', data[10:18])[0]
+        endcode = data[18]
+
+        latest_gps["lat"] = lat
+        latest_gps["lon"] = lon
+        latest_gps_time = time.time()
+
+        print(f"[UDP] Packet - Header: {header}, Length: {length}, Lat: {lat:.6f}, Lon: {lon:.6f}, End: {endcode}")
+
 
 def generate_gps_cot():
-    if latest_gps["lat"] is None or latest_gps["lon"] is None or (time.time() - latest_gps_time) > 3:
+    if latest_gps["lat"] is None or latest_gps["lon"] is None or (time.time() - latest_gps_time) > 5:
         return None
+
+    callsign = "UAV"
+
+    if ros_pub:
+        ros_msg = String()
+        ros_msg.data = f"{callsign},a-f-G-U-C-I,{latest_gps['lat']},{latest_gps['lon']},{latest_gps['hae']}"
+        ros_pub.publish(ros_msg)
+        rospy.loginfo(f"[ROS] Published to /uav/global_position: {ros_msg.data}")
 
     root = ET.Element("event")
     root.set("version", "2.0")
@@ -56,8 +80,8 @@ def generate_gps_cot():
     }
     ET.SubElement(root, "point", attrib=gps_data)
     detail = ET.SubElement(root, "detail")
-    ET.SubElement(detail, "takv", {"device": DEVICE_CALLSIGN, "platform": "Python", "os": DEVICE_OS})
-    ET.SubElement(detail, "contact", {"callsign": DEVICE_CALLSIGN})
+    ET.SubElement(detail, "takv", {"device": "UAV", "platform": "Python", "os": DEVICE_OS})
+    ET.SubElement(detail, "contact", {"callsign": callsign})
     ET.SubElement(detail, "__group", {"name": "Purple", "role": "Team Member"})
     ET.SubElement(detail, "uid", {"Droid": "my-tak-device"})
 
@@ -66,8 +90,7 @@ def generate_gps_cot():
 
 class MySerializer(pytak.QueueWorker):
     async def handle_data(self, data):
-        event = data
-        await self.put_queue(event)
+        await self.put_queue(data)
 
     async def run(self):
         while not rospy.is_shutdown():
@@ -90,25 +113,33 @@ class MyReceiver(pytak.QueueWorker):
 
 
 async def main():
+    global ros_pub
+
+    rospy.init_node("uav_gps_node", anonymous=True)
+    ros_pub = rospy.Publisher('/uav/global_position', String, queue_size=10)
+
+    threading.Thread(target=udp_listener, daemon=True).start()
+
     config = ConfigParser()
     config["mycottool"] = {
-        "COT_URL": "tls://140.113.148.80:8089",
+        "COT_URL": "tls://192.168.1.159:8089",
         "PYTAK_TLS_CLIENT_CERT": "catkin_ws/src/rayvauav/UAV_cert.pem",
         "PYTAK_TLS_CLIENT_KEY": "catkin_ws/src/rayvauav/UAV_key.pem",
         "PYTAK_TLS_CA_CERT": "catkin_ws/src/rayvauav/UAV-trusted.pem",
         "PYTAK_TLS_DONT_CHECK_HOSTNAME": "1",
         "PYTAK_TLS_DONT_VERIFY": "1"
     }
-    config = config["mycottool"]
 
-    clitool = pytak.CLITool(config)
+    clitool = pytak.CLITool(config["mycottool"])
     await clitool.setup()
 
-    clitool.add_tasks(
-        set([MySerializer(clitool.tx_queue, config), MyReceiver(clitool.rx_queue, config)])
-    )
+    clitool.add_tasks({
+        MySerializer(clitool.tx_queue, config["mycottool"]),
+        MyReceiver(clitool.rx_queue, config["mycottool"]),
+    })
 
     await clitool.run()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
