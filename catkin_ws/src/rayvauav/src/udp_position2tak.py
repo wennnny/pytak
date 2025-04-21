@@ -122,10 +122,10 @@ async def main():
 
     config = ConfigParser()
     config["mycottool"] = {
-        "COT_URL": "tls://192.168.1.159:8089",
-        "PYTAK_TLS_CLIENT_CERT": "catkin_ws/src/rayvauav/UAV_cert.pem",
-        "PYTAK_TLS_CLIENT_KEY": "catkin_ws/src/rayvauav/UAV_key.pem",
-        "PYTAK_TLS_CA_CERT": "catkin_ws/src/rayvauav/UAV-trusted.pem",
+        "COT_URL": "tls://192.168.2.159:8089",
+        "PYTAK_TLS_CLIENT_CERT": "UAV_cert.pem",
+        "PYTAK_TLS_CLIENT_KEY": "UAV_key.pem",
+        "PYTAK_TLS_CA_CERT": "UAV-trusted.pem",
         "PYTAK_TLS_DONT_CHECK_HOSTNAME": "1",
         "PYTAK_TLS_DONT_VERIFY": "1"
     }
