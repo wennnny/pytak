@@ -3,30 +3,38 @@
 import rospy
 import socket
 import struct
-from sensor_msgs.msg import NavSatFix
+from std_msgs.msg import String
 
-UDP_TARGET_IP = "192.168.168.121"
-UDP_TARGET_PORT = 49152
+UDP_TARGET_IP = "192.168.168.177"
+UDP_TARGET_PORT = 49153
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-HEADER = 2
+HEADER = 0xAA
 LENGTH = 16
-END = 255
+END = 0xBB
 
-def gps_callback(data):
-    lat = data.latitude
-    lon = data.longitude
+def cot_callback(msg):
+    try:
+        parts = msg.data.strip().split(",")
+        if len(parts) < 2:
+            rospy.logwarn("Received malformed message.")
+            return
 
-    packet = struct.pack('<BBddB', HEADER, LENGTH, lat, lon, END)
-    sock.sendto(packet, (UDP_TARGET_IP, UDP_TARGET_PORT))
+        lat = float(parts[0])
+        lon = float(parts[1])
 
-    local_ip, local_port = sock.getsockname()
-    rospy.loginfo(f"Sent from {local_ip}:{local_port} -> {UDP_TARGET_IP}:{UDP_TARGET_PORT} | Lat: {lat:.6f}, Lon: {lon:.6f}")
+        packet = struct.pack('<BBddB', HEADER, LENGTH, lat, lon, END)
+        sock.sendto(packet, (UDP_TARGET_IP, UDP_TARGET_PORT))
+
+        local_ip, local_port = sock.getsockname()
+        rospy.loginfo(f"[UDP] Sent from {local_ip}:{local_port} -> {UDP_TARGET_IP}:{UDP_TARGET_PORT} | Lat: {lat:.6f}, Lon: {lon:.6f}")
+    except Exception as e:
+        rospy.logerr(f"Error parsing or sending packet: {e}")
 
 def main():
-    rospy.init_node('gps_udp_sender', anonymous=True)
-    rospy.Subscriber("/mavros/global_position/global", NavSatFix, gps_callback)
-    rospy.loginfo("Listening to /mavros/global_position/global and sending UDP packets...")
+    rospy.init_node('cot_udp_sender', anonymous=True)
+    rospy.Subscriber("/cot_message", String, cot_callback)
+    rospy.loginfo("Listening to /cot_message and sending 19-byte UDP packets...")
     rospy.spin()
 
 if __name__ == "__main__":
