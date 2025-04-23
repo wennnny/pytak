@@ -6,6 +6,9 @@ import pytak
 import rospy
 from std_msgs.msg import String
 from configparser import ConfigParser
+from geometry_msgs.msg import Pose, PoseArray
+from std_msgs.msg import Header
+
 
 DEVICE_UID = str(uuid.uuid4())
 DEVICE_OS = platform.system()
@@ -49,18 +52,27 @@ def udp_listener():
 
         print(f"[UDP] Packet - Header: {header}, Length: {length}, Lat: {lat:.6f}, Lon: {lon:.6f}, End: {endcode}")
 
-
 def generate_gps_cot():
-    if latest_gps["lat"] is None or latest_gps["lon"] is None or (time.time() - latest_gps_time) > 5:
+    if latest_gps["lat"] is None or latest_gps["lon"] is None:
         return None
 
     callsign = "UAV"
 
     if ros_pub:
-        ros_msg = String()
-        ros_msg.data = f"{callsign},a-f-G-U-C-I,{latest_gps['lat']},{latest_gps['lon']},{latest_gps['hae']}"
-        ros_pub.publish(ros_msg)
-        rospy.loginfo(f"[ROS] Published to /uav/global_position: {ros_msg.data}")
+        pose = Pose()
+        pose.position.x = latest_gps["lon"]
+        pose.position.y = latest_gps["lat"]
+        pose.position.z = latest_gps["hae"]
+        pose.orientation.w = 1.0
+
+        pose_array = PoseArray()
+        pose_array.header = Header()
+        pose_array.header.stamp = rospy.Time.now()
+        pose_array.header.frame_id = "map"
+        pose_array.poses.append(pose)
+
+        ros_pub.publish(pose_array)
+        rospy.loginfo(f"[ROS] Published PoseArray to /uav/global_position: {pose_array}")
 
     root = ET.Element("event")
     root.set("version", "2.0")
@@ -86,6 +98,44 @@ def generate_gps_cot():
     ET.SubElement(detail, "uid", {"Droid": "my-tak-device"})
 
     return ET.tostring(root)
+
+
+# def generate_gps_cot():
+#     if latest_gps["lat"] is None or latest_gps["lon"] is None:
+#         return None
+
+#     callsign = "UAV"
+
+#     if ros_pub:
+#         ros_msg = String()
+#         ros_msg.data = f"{callsign},a-f-G-U-C-I,{latest_gps['lat']},{latest_gps['lon']},{latest_gps['hae']}"
+#         ros_pub.publish(ros_msg)
+#         rospy.loginfo(f"[ROS] Published to /uav/global_position: {ros_msg.data}")
+
+#     root = ET.Element("event")
+#     root.set("version", "2.0")
+#     root.set("type", "a-f-G-U-C-I")
+#     root.set("uid",  DEVICE_UID)
+#     root.set("how", "m-g")
+#     root.set("time", pytak.cot_time())
+#     root.set("start", pytak.cot_time())
+#     root.set("stale", pytak.cot_time(10))
+
+#     gps_data = {
+#         "lat": str(latest_gps["lat"]),
+#         "lon": str(latest_gps["lon"]),
+#         "hae": str(latest_gps["hae"]),
+#         "ce": "999999",
+#         "le": "999999",
+#     }
+#     ET.SubElement(root, "point", attrib=gps_data)
+#     detail = ET.SubElement(root, "detail")
+#     ET.SubElement(detail, "takv", {"device": "UAV", "platform": "Python", "os": DEVICE_OS})
+#     ET.SubElement(detail, "contact", {"callsign": callsign})
+#     ET.SubElement(detail, "__group", {"name": "Purple", "role": "Team Member"})
+#     ET.SubElement(detail, "uid", {"Droid": "my-tak-device"})
+
+#     return ET.tostring(root)
 
 
 class MySerializer(pytak.QueueWorker):
