@@ -34,9 +34,6 @@ rospy.Subscriber("/mavros/global_position/global", NavSatFix, gps_callback)
 
 def generate_gps_cot():
     """Generate a simple takPong CoT Event."""
-    if latest_gps["lat"] is None or latest_gps["lon"] is None:
-        return None
-
     root = ET.Element("event")
     root.set("version", "2.0")
     root.set("type", "a-f-G-U-C-I")
@@ -44,8 +41,9 @@ def generate_gps_cot():
     root.set("how", "m-g")
     root.set("time", pytak.cot_time())
     root.set("start", pytak.cot_time())
-    root.set("stale", pytak.cot_time(10))
+    root.set("stale", pytak.cot_time(300))
 
+    # lat, lon = get_gps()
     gps_data = {
         "lat": str(latest_gps["lat"]),
         "lon": str(latest_gps["lon"]),
@@ -75,13 +73,12 @@ class MySerializer(pytak.QueueWorker):
         await self.put_queue(event)
 
     async def run(self):
+        """Run the loop for processing or generating pre-CoT data."""
         while not rospy.is_shutdown():
             data = generate_gps_cot()
-            if data:
-                self._logger.info("Sending:\n%s\n", data.decode())
-                await self.handle_data(data)
+            self._logger.info("Sending:\n%s\n", data.decode())
+            await self.handle_data(data)
             await asyncio.sleep(1)
-
 
 class MyReceiver(pytak.QueueWorker):
     """Handle incoming CoT events."""
@@ -103,9 +100,9 @@ async def main():
     config = ConfigParser()
     config["mycottool"] = {
         "COT_URL": "tls://140.113.148.80:8089",
-        "PYTAK_TLS_CLIENT_CERT": "admin_cert.pem",
-        "PYTAK_TLS_CLIENT_KEY": "admin_key.pem",
-        "PYTAK_TLS_CA_CERT": "admin-trusted.pem",
+        "PYTAK_TLS_CLIENT_CERT": "argtest2_cert.pem",
+        "PYTAK_TLS_CLIENT_KEY": "argtest2_key.pem",
+        "PYTAK_TLS_CA_CERT": "argtest2-trusted.pem",
         "PYTAK_TLS_DONT_CHECK_HOSTNAME": "1",
         "PYTAK_TLS_DONT_VERIFY": "1"
     }
