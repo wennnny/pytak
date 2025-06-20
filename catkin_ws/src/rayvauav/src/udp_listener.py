@@ -4,7 +4,7 @@ import socket
 import struct
 
 UDP_IP = "0.0.0.0"
-UDP_PORT = 49153
+UDP_PORT = 49152
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, UDP_PORT))
@@ -12,23 +12,28 @@ sock.bind((UDP_IP, UDP_PORT))
 print(f"Listening for UDP packets on {UDP_IP}:{UDP_PORT}...")
 
 def parse_packet(data):
-    if len(data) != 19:
-        print(f"Invalid packet length: {len(data)}")
+    if len(data) != 31:
+        print(f"Invalid packet length: {len(data)} bytes")
         return
 
-    header = data[0]
-    length = data[1]
-    if length != 16:
-        print(f"Unexpected payload length: {length}")
-        return
+    try:
+        header, length, seq, stamp, lat, lon, endcode = struct.unpack('<BBIdddB', data)
+
+        if length != 28:
+            print(f"Unexpected payload length: {length}")
+            return
+
+        print(f"Received packet -Seq: {seq}, Time: {stamp:.3f}, Lat: {lat:.6f}, Lon: {lon:.6f}")
         
-    lat = struct.unpack('<d', data[2:10])[0]
-    lon = struct.unpack('<d', data[10:18])[0]
-    endcode = data[18]
+    except struct.error as e:
+        print(f"Error unpacking packet: {e}")
 
-    print(f"Received packet - Header: {header}, Length: {length}, Lat: {lat:.6f}, Lon: {lon:.6f}, End: {endcode}")
-
-while True:
-    data, addr = sock.recvfrom(1024)
-    parse_packet(data)
-
+try:
+    while True:
+        data, addr = sock.recvfrom(1024)
+        parse_packet(data)
+except KeyboardInterrupt:
+    print("\n Interrupted by user. Exiting gracefully...")
+finally:
+    sock.close()
+    print("Socket closed.")
