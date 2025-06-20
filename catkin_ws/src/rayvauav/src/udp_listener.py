@@ -1,34 +1,42 @@
-#!/usr/bin/env python3
-
 import socket
 import struct
 
 UDP_IP = "0.0.0.0"
-UDP_PORT = 49153
+UDP_PORT = 49152
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, UDP_PORT))
 
 print(f"Listening for UDP packets on {UDP_IP}:{UDP_PORT}...")
 
+def parse_gps_packet(data):
+    try:
+        header, length, seq, stamp, lat, lon, endcode = struct.unpack('<BBIdddB', data)
+        print(f"[GPS] Seq: {seq}, Time: {stamp:.3f}, Lat: {lat:.6f}, Lon: {lon:.6f}")
+    except struct.error as e:
+        print(f"[GPS] Unpack error: {e}")
+
+def parse_vel_packet(data):
+    try:
+        header, length, seq, linear_x, endcode = struct.unpack('<BBIdB', data)
+        print(f"[VEL] Seq: {seq}, Linear X: {linear_x:.3f}")
+    except struct.error as e:
+        print(f"[VEL] Unpack error: {e}")
+
 def parse_packet(data):
-    if len(data) != 19:
-        print(f"Invalid packet length: {len(data)}")
-        return
+    if len(data) == 31 and data[0] == 0xAA:
+        parse_gps_packet(data)
+    elif len(data) == 15 and data[0] == 0xAB:
+        parse_vel_packet(data)
+    else:
+        print(f"❌ Unknown or invalid packet: {data.hex()}")
 
-    header = data[0]
-    length = data[1]
-    if length != 16:
-        print(f"Unexpected payload length: {length}")
-        return
-        
-    lat = struct.unpack('<d', data[2:10])[0]
-    lon = struct.unpack('<d', data[10:18])[0]
-    endcode = data[18]
-
-    print(f"Received packet - Header: {header}, Length: {length}, Lat: {lat:.6f}, Lon: {lon:.6f}, End: {endcode}")
-
-while True:
-    data, addr = sock.recvfrom(1024)
-    parse_packet(data)
-
+try:
+    while True:
+        data, addr = sock.recvfrom(1024)
+        parse_packet(data)
+except KeyboardInterrupt:
+    print("\n Interrupted by user. Exiting gracefully...")
+finally:
+    sock.close()
+    print("Socket closed.")
