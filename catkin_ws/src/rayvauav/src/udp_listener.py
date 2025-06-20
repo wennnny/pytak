@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import socket
 import struct
 
@@ -11,22 +9,27 @@ sock.bind((UDP_IP, UDP_PORT))
 
 print(f"Listening for UDP packets on {UDP_IP}:{UDP_PORT}...")
 
-def parse_packet(data):
-    if len(data) != 31:
-        print(f"Invalid packet length: {len(data)} bytes")
-        return
-
+def parse_gps_packet(data):
     try:
         header, length, seq, stamp, lat, lon, endcode = struct.unpack('<BBIdddB', data)
-
-        if length != 28:
-            print(f"Unexpected payload length: {length}")
-            return
-
-        print(f"Received packet -Seq: {seq}, Time: {stamp:.3f}, Lat: {lat:.6f}, Lon: {lon:.6f}")
-        
+        print(f"[GPS] Seq: {seq}, Time: {stamp:.3f}, Lat: {lat:.6f}, Lon: {lon:.6f}")
     except struct.error as e:
-        print(f"Error unpacking packet: {e}")
+        print(f"[GPS] Unpack error: {e}")
+
+def parse_vel_packet(data):
+    try:
+        header, length, seq, linear_x, endcode = struct.unpack('<BBIdB', data)
+        print(f"[VEL] Seq: {seq}, Linear X: {linear_x:.3f}")
+    except struct.error as e:
+        print(f"[VEL] Unpack error: {e}")
+
+def parse_packet(data):
+    if len(data) == 31 and data[0] == 0xAA:
+        parse_gps_packet(data)
+    elif len(data) == 15 and data[0] == 0xAB:
+        parse_vel_packet(data)
+    else:
+        print(f"❌ Unknown or invalid packet: {data.hex()}")
 
 try:
     while True:
