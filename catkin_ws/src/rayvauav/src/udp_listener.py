@@ -4,7 +4,7 @@ import socket
 import struct
 
 UDP_IP = "0.0.0.0"
-UDP_PORT = 49152
+UDP_PORT = 49153
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, UDP_PORT))
