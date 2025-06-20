@@ -2,6 +2,6 @@
     <arg name="send_gps" default="true" />
     <arg name="send_vel" default="true" />
 
-    <node if="$(arg send_gps)" pkg="your_package" type="udp_gps_to_basestation.py" name="gps_udp_sender" output="screen" />
-    <node if="$(arg send_vel)" pkg="your_package" type="udp_vel_to_basestation.py" name="vel_udp_sender" output="screen" />
+    <node if="$(arg send_gps)" pkg="rayvauav" type="udp_gps_to_basestation.py" name="gps_udp_sender" output="screen" />
+    <node if="$(arg send_vel)" pkg="rayvauav" type="udp_vel_to_basestation.py" name="vel_udp_sender" output="screen" />
 </launch>
