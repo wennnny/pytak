@@ -2,8 +2,10 @@
     <arg name="send_gps" default="true" />
     <arg name="send_vel" default="true" />
     <arg name="send_can" default="true" />
+    <arg name="send_hdg" default="true" />
 
     <node if="$(arg send_gps)" pkg="rayvauav" type="udp_gps_to_basestation.py" name="gps_udp_sender" output="screen" />
     <node if="$(arg send_vel)" pkg="rayvauav" type="udp_vel_to_basestation.py" name="vel_udp_sender" output="screen" />
     <node if="$(arg send_can)" pkg="rayvauav" type="udp_can_to_basestation.py" name="can_udp_sender" output="screen" />
+    <node if="$(arg send_hdg)" pkg="rayvauav" type="udp_hdg_to_basestation.py" name="hdg_udp_sender" output="screen" />
 </launch>
