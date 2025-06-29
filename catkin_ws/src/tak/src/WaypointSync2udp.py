@@ -48,14 +48,15 @@ def main():
 
     sock_recv = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock_recv.bind((SYNC_IP, SYNC_PORT))
+    sock_recv.settimeout(1.0) 
 
     waypoint_list = []
 
     while not rospy.is_shutdown():
-        data, addr = sock_recv.recvfrom(65535)
-        xml_str = data.decode()
-
         try:
+            data, addr = sock_recv.recvfrom(65535)
+            xml_str = data.decode()
+
             callsign, event_type, lat, lon, hae = parse_cot(xml_str)
 
             if event_type != "b-m-p-s-m":
@@ -74,8 +75,11 @@ def main():
                     rospy.loginfo(f"[UDP] Published {len(waypoint_list)} waypoints via UDP")
                     waypoint_list = []
 
+        except socket.timeout:
+            continue  
         except Exception as e:
             rospy.logerr(f"[SYNC] Error parsing CoT: {e}")
+
 
 if __name__ == "__main__":
     try:
