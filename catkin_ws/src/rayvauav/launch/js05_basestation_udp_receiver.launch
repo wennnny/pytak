@@ -1,0 +1,8 @@
+<launch>
+    <!-- Launch udp_listener.py -->
+    <node pkg="rayvauav" type="udp_listener.py" name="udp_listener" output="screen" />
+
+    <!-- Launch udp_position2tak.py -->
+    <node pkg="rayvauav" type="waypoint_sync_to_udp.py" name="waypoint_sync_to_udp" output="screen" />
+
+</launch>
