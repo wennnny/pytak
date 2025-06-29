@@ -12,11 +12,14 @@ UDP_TARGET_IP = "140.113.148.99"
 UDP_TARGET_PORT = 49157
 udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-# === waypoint 封包格式參數 ===
-HEADER = 0xAF
+# === 封包參數 ===
+WAYPOINT_HEADER = 0xAF
+OBSTACLE_HEADER = 0xB0
 END = 0xC0
+PACKET_LENGTH = 25  # index + lat + lon + hae
 
 waypoint_buffer = []
+obstacle_buffer = []
 
 def parse_cot(xml_data):
     root = ET.fromstring(xml_data)
@@ -33,14 +36,14 @@ def parse_cot(xml_data):
 
     return callsign, event_type, lat, lon, hae
 
-def send_waypoint_udp(index, lat, lon, hae):
-    LENGTH = 25
-    packet = struct.pack('<BBBdddB', HEADER, LENGTH, index, lat, lon, hae, END)
+def send_udp(index, lat, lon, hae, header):
+    packet = struct.pack('<BBBdddB', header, PACKET_LENGTH, index, lat, lon, hae, END)
     udp_sock.sendto(packet, (UDP_TARGET_IP, UDP_TARGET_PORT))
-    print(f"[UDP] Sent waypoint{index}: lat={lat:.6f}, lon={lon:.6f}, hae={hae:.2f}")
+    label = "WAYPOINT" if header == WAYPOINT_HEADER else "OBSTACLE"
+    print(f"[UDP] Sent {label}{index}: lat={lat:.6f}, lon={lon:.6f}, hae={hae:.2f}")
 
-class WaypointReceiver(pytak.QueueWorker):
-    """接收 TAK 傳來的 CoT 並解析/轉送成 UDP"""
+class CotReceiver(pytak.QueueWorker):
+    """接收 TAK 傳來的 CoT 並解析為 waypoint 或 obstacle，透過 UDP 傳出"""
 
     async def handle_data(self, data):
         try:
@@ -50,14 +53,25 @@ class WaypointReceiver(pytak.QueueWorker):
             if event_type != "b-m-p-s-m":
                 return
 
-            if callsign.lower().startswith("waypoint"):
+            cls = callsign.lower()
+
+            if cls.startswith("waypoint"):
                 waypoint_buffer.append((lat, lon, hae))
 
                 if callsign.endswith("!"):
                     for idx, (lat, lon, hae) in enumerate(waypoint_buffer):
-                        send_waypoint_udp(idx, lat, lon, hae)
+                        send_udp(idx, lat, lon, hae, WAYPOINT_HEADER)
                     print(f"[UDP] Published {len(waypoint_buffer)} waypoints via UDP\n")
                     waypoint_buffer.clear()
+
+            elif cls.startswith("obstacle"):
+                obstacle_buffer.append((lat, lon, hae))
+
+                if callsign.endswith("!"):
+                    for idx, (lat, lon, hae) in enumerate(obstacle_buffer):
+                        send_udp(idx, lat, lon, hae, OBSTACLE_HEADER)
+                    print(f"[UDP] Published {len(obstacle_buffer)} obstacles via UDP\n")
+                    obstacle_buffer.clear()
 
         except Exception as e:
             print(f"[ERROR] Failed to parse/send CoT: {e}")
@@ -82,7 +96,7 @@ async def main():
     clitool = pytak.CLITool(config)
     await clitool.setup()
 
-    clitool.add_tasks(set([WaypointReceiver(clitool.rx_queue, config)]))
+    clitool.add_tasks(set([CotReceiver(clitool.rx_queue, config)]))
     await clitool.run()
 
 if __name__ == "__main__":

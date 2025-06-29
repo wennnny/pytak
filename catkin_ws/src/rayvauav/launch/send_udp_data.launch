@@ -40,4 +40,9 @@
         <param name="udp_port" value="$(arg pose_port)" />
         <param name="target_ip" value="$(arg target_ip)" />
     </node>
+
+    <node pkg="rayvauav" type="udp_pose_receiver.py" name="udp_pose_receiver" output="screen">
+        <param name="udp_port" value="49157" />
+        <param name="udp_ip" value="0.0.0.0" />
+    </node>
 </launch>
