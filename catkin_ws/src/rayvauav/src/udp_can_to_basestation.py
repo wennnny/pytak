@@ -4,8 +4,8 @@ import socket
 import struct
 from std_msgs.msg import String
 
-UDP_TARGET_IP = "140.113.148.80"
-UDP_TARGET_PORT = 49152
+UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
+UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 

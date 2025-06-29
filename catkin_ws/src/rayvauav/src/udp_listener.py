@@ -38,6 +38,13 @@ def parse_hdg_packet(data):
     except struct.error as e:
         print(f"[HDG] Unpack error: {e}")
 
+def parse_pose_packet(data):
+    try:
+        header, length, idx, x, y, z, endcode = struct.unpack('<BBBfffB', data)
+        print(f"[POSE] Index: {idx}, Pos: x={x:.2f}, y={y:.2f}, z={z:.2f}")
+    except struct.error as e:
+        print(f"[POSE] Unpack error: {e}")
+
 def parse_packet(data):
     if len(data) == 31 and data[0] == 0xAA:
         parse_gps_packet(data)
@@ -47,6 +54,8 @@ def parse_packet(data):
         parse_can_packet(data)
     elif len(data) == 11 and data[0] == 0xAD:
         parse_hdg_packet(data)
+    elif len(data) == 16 and data[0] == 0xAE:
+        parse_pose_packet(data)
     else:
         print(f"Unknown or invalid packet: {data.hex()}")
 
@@ -66,3 +75,4 @@ finally:
 # Velocity	0xAB	49152	seq + linear.x
 # CAN	    0xAC	49152	b6 + b7
 # Compass	0xAD	49152	float64 (heading)
+# PoseArray 0xAE	49152	index + x + y + z
