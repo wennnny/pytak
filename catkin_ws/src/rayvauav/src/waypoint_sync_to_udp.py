@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
-import asyncio
+import asyncio, struct
 import socket
-import struct
 import xml.etree.ElementTree as ET
 from configparser import ConfigParser
 import pytak

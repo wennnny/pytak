@@ -20,7 +20,7 @@ sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 sock.bind((UDP_IP, UDP_PORT))
 sock.settimeout(1.0)
 
-rospy.loginfo(f"📡 Listening for UDP pose data on {UDP_IP}:{UDP_PORT}...")
+rospy.loginfo(f"Listening for UDP pose data on {UDP_IP}:{UDP_PORT}...")
 
 pub_waypoint = rospy.Publisher('/waypoint/udp_global_position', PoseArray, queue_size=10)
 pub_obstacle = rospy.Publisher('/obstacle/udp_global_position', PoseArray, queue_size=10)
