@@ -5,9 +5,6 @@ import struct
 from sensor_msgs.msg import NavSatFix
 from datetime import datetime, timedelta
 
-UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
-UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
-
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 HEADER = 0xAA
@@ -33,7 +30,12 @@ def gps_callback(msg: NavSatFix):
         rospy.logerr(f"[UDP] Error sending packet: {e}")
 
 def main():
+    global UDP_TARGET_IP, UDP_TARGET_PORT
+
     rospy.init_node('gps_udp_sender', anonymous=True)
+    UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
+    UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
+
     rospy.Subscriber("/mavros/global_position/raw/fix", NavSatFix, gps_callback)
     rospy.loginfo("Listening to /mavros/global_position/raw/fix and sending UDP packets...")
     rospy.spin()

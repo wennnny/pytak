@@ -5,9 +5,6 @@ import struct
 import time
 from geometry_msgs.msg import TwistStamped
 
-UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
-UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
-
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 HEADER = 0xAB
@@ -19,9 +16,8 @@ def velocity_callback(msg: TwistStamped):
         seq = msg.header.seq
         linear_x = msg.twist.linear.x
 
-        # 封包格式：Header(1) + Length(1) + Seq(4) + linear_x(8) + End(1) = 15 bytes
         packet = struct.pack('<BBIdB', HEADER, LENGTH, seq, linear_x, END)
-        sock.sendto(packet, (UDP_IP, UDP_PORT))
+        sock.sendto(packet, (UDP_TARGET_IP, UDP_TARGET_PORT))
 
         rospy.loginfo(f"[UDP] Sent LinearX={linear_x:.3f} with Seq={seq}")
 
@@ -29,7 +25,12 @@ def velocity_callback(msg: TwistStamped):
         rospy.logerr(f"[UDP] Error: {e}")
 
 def main():
+    global UDP_TARGET_IP, UDP_TARGET_PORT
+
     rospy.init_node('velocity_udp_sender', anonymous=True)
+    UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
+    UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
+
     rospy.Subscriber("/mavros/local_position/velocity_body", TwistStamped, velocity_callback)
     rospy.loginfo("Subscribing to /mavros/local_position/velocity_body and sending linear.x via UDP...")
     rospy.spin()
