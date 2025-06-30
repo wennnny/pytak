@@ -4,9 +4,6 @@ import socket
 import struct
 from std_msgs.msg import String
 
-UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
-UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
-
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 HEADER = 0xAC
@@ -35,7 +32,12 @@ def can_callback(msg: String):
         rospy.logerr(f"[UDP] Error sending CAN data: {e}")
 
 def main():
+    global UDP_TARGET_IP, UDP_TARGET_PORT  # make them accessible in callback
+
     rospy.init_node('can_udp_sender', anonymous=True)
+    UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
+    UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
+
     rospy.Subscriber("/can_rx", String, can_callback)
     rospy.loginfo("Listening to /can_rx and sending b6/b7 via UDP...")
     rospy.spin()

@@ -6,11 +6,13 @@
     <arg name="send_pose" default="true" />
 
     <arg name="target_ip" default="140.113.148.80" />
+    <arg name="receive_ip" default="0.0.0.0" />
     <arg name="gps_port" default="49152" />
     <arg name="vel_port" default="49152" />
     <arg name="can_port" default="49152" />
     <arg name="hdg_port" default="49152" />
     <arg name="pose_port" default="49152" />
+    <arg name="waypoint_port" default="49157" />
 
     <!-- Data about the USV -->
 
@@ -41,9 +43,9 @@
         <param name="target_ip" value="$(arg target_ip)" />
     </node>
 
-    <node pkg="rayvauav" type="udp_pose_receiver.py" name="udp_pose_receiver" output="screen">
-        <param name="udp_port" value="49157" />
-        <param name="udp_ip" value="0.0.0.0" />
+    <node pkg="rayvauav" type="udp_waypoint_receiver.py" name="udp_waypoint_receiver" output="screen">
+        <param name="udp_port" value="$(arg waypoint_port)" />
+        <param name="udp_ip" value="$(arg receive_ip)" /> 
     </node>
     
 </launch>

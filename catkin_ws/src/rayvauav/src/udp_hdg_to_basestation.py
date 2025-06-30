@@ -4,9 +4,6 @@ import socket
 import struct
 from std_msgs.msg import Float64
 
-UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
-UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
-
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 HEADER = 0xAD
@@ -23,7 +20,12 @@ def compass_callback(msg: Float64):
         rospy.logerr(f"[UDP] Error sending compass heading: {e}")
 
 def main():
+    global UDP_TARGET_IP, UDP_TARGET_PORT  # make them accessible to callback
+
     rospy.init_node('compass_udp_sender', anonymous=True)
+    UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
+    UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
+
     rospy.Subscriber("/mavros/global_position/compass_hdg", Float64, compass_callback)
     rospy.loginfo("Listening to /mavros/global_position/compass_hdg and sending via UDP...")
     rospy.spin()
