@@ -1,0 +1,38 @@
+{
+    "chat": {
+        "event": {
+            "version": "2.0",
+            "type": "b-t-f",
+            "how": "m-g-i-g-o",
+            "stale_seconds": 300
+        },
+        "chatroom": {
+            "name": "All Chat Rooms",
+            "parent": "RootContactGroup",
+            "groupOwner": "false"
+        },
+        "point": {
+            "lat": "0.0",
+            "lon": "0.0",
+            "hae": "999999.0",
+            "ce": "999999.0",
+            "le": "999999.0"
+        }
+    },
+    "gps": {
+        "event": {
+            "version": "2.0",
+            "type": "a-u-G",
+            "how": "h-g-i-g-o",
+            "stale_seconds": 300
+        },
+        "detail": {
+            "group": {
+                "name": "Purple",
+                "role": "Team Member"
+            },
+            "uid": "my-tak-device",
+            "iconsetpath": "34ae1613-9645-4222-a9d2-e5f243dea2865/Transportation/Boat.png"
+        }
+    }
+}
