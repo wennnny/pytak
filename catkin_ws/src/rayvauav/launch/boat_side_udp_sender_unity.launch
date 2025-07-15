@@ -1,0 +1,51 @@
+<launch>
+    <arg name="send_gps" default="true" />
+    <arg name="send_vel" default="true" />
+    <arg name="send_can" default="true" />
+    <arg name="send_hdg" default="true" />
+    <arg name="send_pose" default="true" />
+
+    <arg name="target_ip" default="10.0.0.80" />
+    <arg name="receive_ip" default="0.0.0.0" />
+    <arg name="gps_port" default="49152" />
+    <arg name="vel_port" default="49152" />
+    <arg name="can_port" default="49152" />
+    <arg name="hdg_port" default="49152" />
+    <arg name="pose_port" default="49152" />
+    <arg name="waypoint_port" default="49157" />
+
+    <!-- Data about the USV -->
+
+    <node if="$(arg send_gps)" pkg="rayvauav" type="udp_gps_to_basestation.py" name="gps_udp_sender_2" output="screen">
+        <param name="udp_port" value="$(arg gps_port)" />
+        <param name="target_ip" value="$(arg target_ip)" />
+    </node>
+
+    <node if="$(arg send_vel)" pkg="rayvauav" type="udp_vel_to_basestation.py" name="vel_udp_sender_2" output="screen">
+        <param name="udp_port" value="$(arg vel_port)" />
+        <param name="target_ip" value="$(arg target_ip)" />
+    </node>
+
+    <node if="$(arg send_can)" pkg="rayvauav" type="udp_can_to_basestation.py" name="can_udp_sender_2" output="screen">
+        <param name="udp_port" value="$(arg can_port)" />
+        <param name="target_ip" value="$(arg target_ip)" />
+    </node>
+
+    <node if="$(arg send_hdg)" pkg="rayvauav" type="udp_hdg_to_basestation.py" name="hdg_udp_sender_2" output="screen">
+        <param name="udp_port" value="$(arg hdg_port)" />
+        <param name="target_ip" value="$(arg target_ip)" />
+    </node>
+
+    <!-- Obstacle position and pose data -->
+
+    <node if="$(arg send_pose)" pkg="rayvauav" type="udp_obspos_to_base.py" name="pose_udp_sender_2" output="screen">
+        <param name="udp_port" value="$(arg pose_port)" />
+        <param name="target_ip" value="$(arg target_ip)" />
+    </node>
+
+    <node pkg="rayvauav" type="udp_waypoint_receiver.py" name="udp_waypoint_receiver_2" output="screen">
+        <param name="udp_port" value="$(arg waypoint_port)" />
+        <param name="udp_ip" value="$(arg receive_ip)" /> 
+    </node>
+    
+</launch>
