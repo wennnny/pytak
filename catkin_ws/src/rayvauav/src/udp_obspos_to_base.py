@@ -28,8 +28,8 @@ def posearray_callback(msg: PoseArray):
 
 def main():
     rospy.init_node('posearray_udp_sender', anonymous=True)
-    rospy.Subscriber("/waypoints", PoseArray, posearray_callback)
-    rospy.loginfo("Listening to /waypoints and sending each Pose via UDP...")
+    rospy.Subscriber("/detected_obstacles/gps/pose_array", PoseArray, posearray_callback)
+    rospy.loginfo("Listening to /detected_obstacles/gps/pose_array and sending each Pose via UDP...")
     rospy.spin()
 
 if __name__ == "__main__":

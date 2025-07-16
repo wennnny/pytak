@@ -19,6 +19,33 @@ DEVICE_OS = platform.system()
 latest_msgs = defaultdict(str)
 latest_gps = {"lat": None, "lon": None, "hae": 999999.0}
 
+
+async def handle_queue_data(q, latest_msgs, tx_queue):
+    while True:
+        if not q.empty():
+            msg_type, data = q.get()
+            if msg_type == "gps":
+                latest_msgs['gps'] = f"[GPS] Seq={data['seq']}, Time={data['stamp']:.3f}, Lat={data['lat']:.6f}, Lon={data['lon']:.6f}"
+                latest_gps['lat'] = data['lat']
+                latest_gps['lon'] = data['lon']
+                latest_gps['hae'] = 999999.0  # Placeholder HAE
+            elif msg_type == "vel":
+                latest_msgs['vel'] = f"[VEL] Seq={data['seq']}, LinearX={data['linear_x']:.3f}"
+            elif msg_type == "can":
+                latest_msgs['can'] = f"[CAN] Throttle={data['throttle']}, Steering={data['steering']}"
+            elif msg_type == "hdg":
+                latest_msgs['hdg'] = f"[HDG] Heading={data['heading']:.2f}°"
+            elif msg_type == "obspos":
+                idx, x, y, z = data["idx"], data["x"], data["y"], data["z"]
+                latest_msgs[f'obstacle{idx}'] = f"[OBS] idx={idx} x={x:.2f}, y={y:.2f}, z={z:.2f}"
+                cot_msg = generate_obstacle_cot(idx, x, y, z)
+                await tx_queue.put(cot_msg)
+            elif msg_type == "error":
+                latest_msgs['error'] = f"[UNPACK ERROR] {data['error']}"
+            else:
+                latest_msgs['unknown'] = f"[UNKNOWN] {data}"
+        await asyncio.sleep(0.01)
+
 # === Generate chat CoT ===
 def generate_chat_cot(message: str):
     cfg = cot_config["chat"]
@@ -55,7 +82,7 @@ def generate_chat_cot(message: str):
     return ET.tostring(root)
 
 
-# === Generate GPS member CoT ===
+# === Generate boat GPS member CoT ===
 def generate_gps_cot():
     cfg = cot_config["gps"]
     root = ET.Element("event")
@@ -88,27 +115,40 @@ def generate_gps_cot():
 
     return ET.tostring(root)
 
+# === Generate obstacle GPS member CoT ===
+def generate_obstacle_cot(idx, x, y, z):
+    cfg = cot_config["obstacle"]
+    root = ET.Element("event")
+    root.set("version", cfg["event"]["version"])
+    root.set("type", cfg["event"]["type"])
+    root.set("uid", f"obstacle-{idx}")
+    root.set("how", cfg["event"]["how"])
+    root.set("time", pytak.cot_time())
+    root.set("start", pytak.cot_time())
+    root.set("stale", pytak.cot_time(cfg["event"]["stale_seconds"]))
 
-async def handle_queue_data(q, latest_msgs):
-    while True:
-        if not q.empty():
-            msg_type, data = q.get()
-            if msg_type == "gps":
-                latest_msgs['gps'] = f"[GPS] Seq={data['seq']}, Time={data['stamp']:.3f}, Lat={data['lat']:.6f}, Lon={data['lon']:.6f}"
-                latest_gps['lat'] = data['lat']
-                latest_gps['lon'] = data['lon']
-                latest_gps['hae'] = 999999.0  # Placeholder HAE
-            elif msg_type == "vel":
-                latest_msgs['vel'] = f"[VEL] Seq={data['seq']}, LinearX={data['linear_x']:.3f}"
-            elif msg_type == "can":
-                latest_msgs['can'] = f"[CAN] Throttle={data['throttle']}, Steering={data['steering']}"
-            elif msg_type == "hdg":
-                latest_msgs['hdg'] = f"[HDG] Heading={data['heading']:.2f}°"
-            elif msg_type == "error":
-                latest_msgs['error'] = f"[UNPACK ERROR] {data['error']}"
-            else:
-                latest_msgs['unknown'] = f"[UNKNOWN] {data}"
-        await asyncio.sleep(0.01)
+    ET.SubElement(root, "point", {
+        "lat": str(y),
+        "lon": str(x),
+        "hae": str(z),
+        "ce": "999999",
+        "le": "999999"
+    })
+
+    detail = ET.SubElement(root, "detail")
+    ET.SubElement(detail, "takv", {
+        "device": DEVICE_CALLSIGN,
+        "platform": "Python",
+        "os": DEVICE_OS
+    })
+    ET.SubElement(detail, "contact", {"callsign": f"obstacle{idx}"})
+    ET.SubElement(detail, "__group", cfg["detail"]["group"])
+    ET.SubElement(detail, "uid", {"Droid": cfg["detail"]["uid"]})
+    ET.SubElement(detail, "usericon", {"iconsetpath": cfg["detail"]["iconsetpath"]})
+    ET.SubElement(detail, "color", {"argb": cfg["detail"]["color"]})
+
+    return ET.tostring(root)
+
 
 class BundlerWorker(pytak.QueueWorker):
     def __init__(self, tx_queue, config, latest_msgs):
@@ -167,7 +207,7 @@ async def main():
     listener_process = Process(target=listener_worker, args=(queue,))
     listener_process.start()
 
-    parser_task = asyncio.create_task(handle_queue_data(queue, latest_msgs))
+    parser_task = asyncio.create_task(handle_queue_data(queue, latest_msgs, clitool.tx_queue))
 
     clitool.add_tasks({
         BundlerWorker(clitool.tx_queue, config, latest_msgs),
