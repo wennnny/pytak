@@ -6,10 +6,10 @@ import pytak
 from configparser import ConfigParser
 from collections import defaultdict
 from multiprocessing import Queue, Process
-from udp_listener_async import listener_worker
+from udp_listener_async_49152 import listener_worker
 import json, os
 
-config_path = os.path.expanduser("~/Downloads/TAK_Server_Configurator/pytak/catkin_ws/src/rayvauav/src/cot_config.json")
+config_path = os.path.expanduser("~/Downloads/pytak/catkin_ws/src/rayvauav/src/cot_config.json")
 with open(config_path, "r") as f:
     cot_config = json.load(f)
 
@@ -104,11 +104,11 @@ def generate_gps_cot():
 
     detail = ET.SubElement(root, "detail")
     ET.SubElement(detail, "takv", {
-        "device": DEVICE_CALLSIGN,
+        "device": "JS_05",
         "platform": "Python",
         "os": DEVICE_OS
     })
-    ET.SubElement(detail, "contact", {"callsign": DEVICE_CALLSIGN})
+    ET.SubElement(detail, "contact", {"callsign": "JS_05"})
     ET.SubElement(detail, "__group", cfg["detail"]["group"])
     ET.SubElement(detail, "uid", {"Droid": cfg["detail"]["uid"]})
     ET.SubElement(detail, "usericon", {"iconsetpath": cfg["detail"]["iconsetpath"]})
@@ -192,9 +192,9 @@ async def main():
     config = ConfigParser()
     config["mycottool"] = {
         "COT_URL": "tls://140.113.148.80:8089",
-        "PYTAK_TLS_CLIENT_CERT": "argtest1_cert.pem",
-        "PYTAK_TLS_CLIENT_KEY": "argtest1_key.pem",
-        "PYTAK_TLS_CA_CERT": "argtest1-trusted.pem",
+        "PYTAK_TLS_CLIENT_CERT": "/home/moos-dawg/Downloads/pytak/catkin_ws/files_WAN/argtest2_cert.pem",
+        "PYTAK_TLS_CLIENT_KEY": "/home/moos-dawg/Downloads/pytak/catkin_ws/files_WAN/argtest2_key.pem",
+        "PYTAK_TLS_CA_CERT": "/home/moos-dawg/Downloads/pytak/catkin_ws/files_WAN/argtest2-trusted.pem",
         "PYTAK_TLS_DONT_CHECK_HOSTNAME": "1",
         "PYTAK_TLS_DONT_VERIFY": "1"
     }

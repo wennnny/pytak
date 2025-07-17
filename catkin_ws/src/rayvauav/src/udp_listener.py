@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from multiprocessing import Queue, Process
-from udp_listener_async import listener_worker
+from udp_listener_async_49152 import listener_worker
 import time
 
 if __name__ == "__main__":

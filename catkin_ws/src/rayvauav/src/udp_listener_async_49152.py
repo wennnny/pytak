@@ -20,9 +20,6 @@ def parse_packet(data):
         elif len(data) == 11 and data[0] == 0xAD:
             _, _, heading, _ = struct.unpack('<BBdB', data)
             return "hdg", {"heading": heading}
-        elif len(data) == 16 and data[0] == 0xAE:
-            _, _, idx, x, y, z, _ = struct.unpack('<BBBfffB', data)
-            return "obspos", {"idx": idx, "x": x, "y": y, "z": z}
     except Exception as e:
         return "error", {"error": str(e), "raw": data.hex()}
     return "unknown", {"raw": data.hex()}
@@ -33,7 +30,8 @@ def listener_worker(q: Queue):
     print(f"[UDP Listener] Listening on {UDP_IP}:{UDP_PORT}")
 
     while True:
-        data, _ = sock.recvfrom(1024)
+        data, addr = sock.recvfrom(1024)
+        # print(f"[RECV] {len(data)} bytes from {addr}: {data.hex()}")
         msg_type, parsed = parse_packet(data)
         q.put((msg_type, parsed))  # 非同步寫入共享 Queue
 
