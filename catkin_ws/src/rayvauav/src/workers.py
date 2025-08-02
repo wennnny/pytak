@@ -23,19 +23,20 @@ async def handle_queue_data(q, tx_queue):
                     ctrl_map = {0: "Inactive", 1: "Active", 2: "Takeover", 3: "E-Stop"}
                     drive_map = {0: "Port", 1: "Starboard"}
 
-                latest_msgs['can'] = (
-                    f"[CAN] Drive: {drive_map.get(data['driveLine'], '?')}, "
-                    f"Ctrl: {ctrl_map.get(data['externalControl'], '?')}, "
-                    f"Engine: {engine_map.get(data['engineState'], '?')}, "
-                    f"Gear: {gear_map.get(data['gear'], '?')}, "
-                    f"Throttle: {data['throttle']}%, "
-                    f"Steering: {data['steering']}"
-                )
-            else:  # 舊版 CAN 資料（只有 throttle + steering）
-                latest_msgs['can'] = f"[CAN] Throttle={data['throttle']}, Steering={data['steering']}"
+                    latest_msgs['can'] = (
+                        f"[CAN] Drive: {drive_map.get(data['driveLine'], '?')}, "
+                        f"Ctrl: {ctrl_map.get(data['externalControl'], '?')}, "
+                        f"Engine: {engine_map.get(data['engineState'], '?')}, "
+                        f"Gear: {gear_map.get(data['gear'], '?')}, "
+                        f"Throttle: {data['throttle']}%, "
+                        f"Steering: {data['steering']}"
+                    )
+                else:  # 舊版 CAN 資料（只有 throttle + steering）
+                    latest_msgs['can'] = f"[CAN] Throttle={data['throttle']}, Steering={data['steering']}"
 
             elif msg_type == "hdg":
                 latest_msgs['hdg'] = f"[HDG] Heading={data['heading']:.2f}°"
+                
             # elif msg_type == "obspos":
             #     idx, x, y, z = data["idx"], data["x"], data["y"], data["z"]
             #     latest_msgs[f'obstacle{idx}'] = f"[OBS] idx={idx} x={x:.2f}, y={y:.2f}, z={z:.2f}"
