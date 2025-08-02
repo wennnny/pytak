@@ -11,17 +11,41 @@ def parse_packet(data):
         if len(data) == 31 and data[0] == 0xAA:
             _, _, seq, stamp, lat, lon, _ = struct.unpack('<BBIdddB', data)
             return "gps", {"seq": seq, "stamp": stamp, "lat": lat, "lon": lon}
+
         elif len(data) == 15 and data[0] == 0xAB:
             _, _, seq, linear_x, _ = struct.unpack('<BBIdB', data)
             return "vel", {"seq": seq, "linear_x": linear_x}
+
+        elif len(data) == 9 and data[0] == 0xAC:
+            _, _, b2, b3, b4, b5, b6, b7, _ = struct.unpack('<BBBBBBBBB', data)
+            driveLine = (b3 & 0xF0) >> 4
+            externalControl = b3 & 0x0F
+            engineState = (b4 & 0x0C) >> 2
+            gear = b4 & 0x03
+            return "can", {
+                "b2": b2, "driveLine": driveLine, "externalControl": externalControl,
+                "engineState": engineState, "gear": gear,
+                "dps": b5, "throttle": b6, "steering": b7
+            }
+
         elif len(data) == 5 and data[0] == 0xAC:
             _, _, b6, b7, _ = struct.unpack('<BB2BB', data)
             return "can", {"throttle": b6, "steering": b7}
+
         elif len(data) == 11 and data[0] == 0xAD:
             _, _, heading, _ = struct.unpack('<BBdB', data)
             return "hdg", {"heading": heading}
+
+        elif len(data) == 16 and data[0] == 0xAE:
+            _, _, idx = struct.unpack('<BBB', data[:3])
+            x = struct.unpack('<f', data[3:7])[0]
+            y = struct.unpack('<f', data[7:11])[0]
+            z = struct.unpack('<f', data[11:15])[0]
+            return "pose", {"index": idx, "x": x, "y": y, "z": z}
+
     except Exception as e:
         return "error", {"error": str(e), "raw": data.hex()}
+
     return "unknown", {"raw": data.hex()}
 
 def listener_worker(q: Queue):
