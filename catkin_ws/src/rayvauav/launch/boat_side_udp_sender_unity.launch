@@ -47,6 +47,7 @@
     <node if="$(arg send_goal)" pkg="rayvauav" type="udp_goal_to_base.py" name="goal_udp_sender_2" output="screen">
         <param name="udp_port" value="$(arg pose_port)" />
         <param name="target_ip" value="$(arg target_ip)" />
+    </node>
 
     <node pkg="rayvauav" type="udp_waypoint_receiver.py" name="udp_waypoint_receiver_2" output="screen">
         <param name="udp_port" value="$(arg waypoint_port)" />
