@@ -1,19 +1,23 @@
 #!/usr/bin/env python3
+
 import rospy
 import socket
 import struct
+import time
 from geometry_msgs.msg import Pose, PoseArray
 from std_msgs.msg import Header
 
 # === Initialization ===
 rospy.init_node('udp_pose_receiver', anonymous=True)
 UDP_PORT = rospy.get_param("~udp_port", 49157)
-UDP_IP = rospy.get_param("~udp_ip", "0.0.0.0")
+UDP_IP   = rospy.get_param("~udp_ip", "0.0.0.0")
 
 WAYPOINT_HEADER = 0xAF
 OBSTACLE_HEADER = 0xB0
-END_CODE = 0xC0
-PACKET_SIZE = 28
+END_CODE        = 0xC0
+
+PACKET_SIZE_NO_TS    = 28  # 無 timestamp
+PACKET_SIZE_WITH_TS  = 36  # 含 timestamp
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -49,15 +53,36 @@ try:
             continue
 
         try:
-            if len(data) != PACKET_SIZE:
-                rospy.logwarn(f"Invalid packet size: {len(data)}")
+            n = len(data)
+            if n not in (PACKET_SIZE_NO_TS, PACKET_SIZE_WITH_TS):
+                rospy.logwarn(f"Invalid packet size: {n}")
                 continue
 
-            header, length, index, lat, lon, hae, endcode = struct.unpack('<BBBdddB', data)
+            has_ts = (n == PACKET_SIZE_WITH_TS)
 
-            if length != 25:
-                rospy.logwarn(f"Unexpected length: {length}")
+            if has_ts:
+                header, length, index, lat, lon, hae, ts, endcode = struct.unpack('<BBBddddB', data)
+                if length != 33:
+                    rospy.logwarn(f"Unexpected length (with ts): {length}")
+                    continue
+            else:
+                header, length, index, lat, lon, hae, endcode = struct.unpack('<BBBdddB', data)
+                if length != 25:
+                    rospy.logwarn(f"Unexpected length (no ts): {length}")
+                    continue
+                ts = None
+
+            if endcode != END_CODE:
+                rospy.logwarn(f"Invalid end code: {endcode}")
                 continue
+
+            # 發送端 & 接收端 timestamp 與 latency
+            if ts is not None:
+                recv_time = time.time()
+                latency_ms = (recv_time - ts) * 1000.0
+                rospy.loginfo(
+                    f"[Latency] idx={index} | 發送端: {ts:.6f} | 接收端: {recv_time:.6f} | 延遲: {latency_ms:.1f} ms"
+                )
 
             pose = pose_from_latlonhae(lat, lon, hae)
 
@@ -104,3 +129,6 @@ try:
 finally:
     sock.close()
     rospy.loginfo("Socket closed. Node exiting.")
+
+
+

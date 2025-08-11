@@ -4,8 +4,9 @@
     <arg name="send_can" default="true" />
     <arg name="send_hdg" default="true" />
     <arg name="send_pose" default="true" />
+    <arg name="send_goal" default="true" />
 
-    <arg name="target_ip" default="10.0.0.80" />
+    <arg name="target_ip" default="10.0.0.8" />
     <arg name="receive_ip" default="0.0.0.0" />
     <arg name="gps_port" default="49152" />
     <arg name="vel_port" default="49152" />
@@ -39,6 +40,11 @@
     <!-- Obstacle position and pose data -->
 
     <node if="$(arg send_pose)" pkg="rayvauav" type="udp_obspos_to_base.py" name="pose_udp_sender_2" output="screen">
+        <param name="udp_port" value="$(arg pose_port)" />
+        <param name="target_ip" value="$(arg target_ip)" />
+    </node>
+
+    <node if="$(arg send_goal)" pkg="rayvauav" type="udp_goal_to_base.py" name="goal_udp_sender_2" output="screen">
         <param name="udp_port" value="$(arg pose_port)" />
         <param name="target_ip" value="$(arg target_ip)" />
     </node>
