@@ -26,10 +26,12 @@ def posearray_callback(msg: PoseArray):
 
 def main():
     global UDP_TARGET_IP, UDP_TARGET_PORT
+
+    rospy.init_node('goal_udp_sender', anonymous=True)
     UDP_TARGET_IP = rospy.get_param("~target_ip", "10.0.0.80")
     UDP_TARGET_PORT = rospy.get_param("~udp_port", 49153)
 
-    rospy.init_node('posearray_udp_sender', anonymous=True)
+    # rospy.init_node('posearray_udp_sender', anonymous=True)
     rospy.Subscriber("/goal/gps/pose_array", PoseArray, posearray_callback)
     rospy.loginfo(f"Listening to /goal/gps/pose_array and sending each Pose via UDP to {UDP_TARGET_IP}:{UDP_TARGET_PORT}...")
     rospy.spin()
