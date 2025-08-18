@@ -39,6 +39,10 @@ class ObstacleProtocol(asyncio.DatagramProtocol):
                     logging.info(f"[GOAL] From {addr} → idx={idx}, x={x:.6f}, y={y:.6f}, z={z:.6f}")
                     cot = generate_goal_cot(idx, x, y, z)
 
+                elif header == 0xAC:
+                    logging.info(f"[START] From {addr} → idx={idx}, x={x:.6f}, y={y:.6f}, z={z:.6f}")
+                    cot = generate_goal_cot(idx, x, y, z)
+
                 else:
                     logging.warning(f"[UNKNOWN HEADER] {header} from {addr}")
                     return
