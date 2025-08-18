@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 import pytak
 import json, os
 
-config_path = os.path.expanduser("~/Downloads/TAK_Server_Configurator/pytak/catkin_ws/src/rayvauav/src/cot_config.json")
+config_path = os.path.expanduser("~/Downloads/pytak/catkin_ws/src/rayvauav/src/cot_config.json")
 with open(config_path, "r") as f:
     cot_config = json.load(f)
 
@@ -115,6 +115,30 @@ def generate_goal_cot(idx, lat, lon, hae):
     detail = ET.SubElement(root, "detail")
     ET.SubElement(detail, "takv", {"device": DEVICE_CALLSIGN, "platform": "Python", "os": DEVICE_OS})
     ET.SubElement(detail, "contact", {"callsign": f"goalpoint-{idx}"})
+    ET.SubElement(detail, "__group", cfg["detail"]["group"])
+    ET.SubElement(detail, "uid", {"Droid": cfg["detail"]["uid"]})
+    ET.SubElement(detail, "usericon", {"iconsetpath": cfg["detail"]["iconsetpath"]})
+    ET.SubElement(detail, "color", {"argb": cfg["detail"]["color"]})
+    return ET.tostring(root)
+
+# === Generate start CoT ===
+def generate_start_cot(idx, lat, lon, hae):
+    cfg = cot_config["startpoint"]
+    root = ET.Element("event")
+    root.set("version", cfg["event"]["version"])
+    root.set("type", cfg["event"]["type"])
+    root.set("uid", f"startpoint-{idx}")
+    root.set("how", cfg["event"]["how"])
+    root.set("time", pytak.cot_time())
+    root.set("start", pytak.cot_time())
+    root.set("stale", pytak.cot_time(cfg["event"]["stale_seconds"]))
+    ET.SubElement(root, "point", {
+        "lat": str(lat), "lon": str(lon), "hae": str(hae),
+        "ce": "999999", "le": "999999"
+    })
+    detail = ET.SubElement(root, "detail")
+    ET.SubElement(detail, "takv", {"device": DEVICE_CALLSIGN, "platform": "Python", "os": DEVICE_OS})
+    ET.SubElement(detail, "contact", {"callsign": f"startpoint-{idx}"})
     ET.SubElement(detail, "__group", cfg["detail"]["group"])
     ET.SubElement(detail, "uid", {"Droid": cfg["detail"]["uid"]})
     ET.SubElement(detail, "usericon", {"iconsetpath": cfg["detail"]["iconsetpath"]})

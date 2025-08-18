@@ -5,8 +5,9 @@
     <arg name="send_hdg" default="true" />
     <arg name="send_pose" default="true" />
     <arg name="send_goal" default="true" />
+    <arg name="send_start" default="true" />
 
-    <arg name="target_ip" default="10.0.0.80" />
+    <arg name="target_ip" default="192.168.0.113" />
     <arg name="receive_ip" default="0.0.0.0" />
     <arg name="gps_port" default="49152" />
     <arg name="vel_port" default="49152" />
@@ -49,6 +50,11 @@
         <param name="udp_port" value="49153" />
         <param name="target_ip" value="$(arg target_ip)" />
     </node>
+
+    <node if="$(arg send_goal)" pkg="rayvauav" type="udp_start_to_base.py" name="start_udp_sender" output="screen">
+        <param name="udp_port" value="49153" />
+        <param name="target_ip" value="$(arg target_ip)" />
+    </node>    
 
     <!-- Receiver for waypoints and MOOS commands -->
 

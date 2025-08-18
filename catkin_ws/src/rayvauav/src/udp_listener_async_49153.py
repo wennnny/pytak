@@ -3,7 +3,7 @@ import asyncio
 import socket
 import struct
 import logging
-from cot_utils import generate_obstacle_cot, generate_goal_cot
+from cot_utils import generate_obstacle_cot, generate_goal_cot, generate_start_cot
 
 class ObstacleUDPWorker:
     def __init__(self, tx_queue, listen_ip="0.0.0.0", listen_port=49153):
@@ -41,7 +41,7 @@ class ObstacleProtocol(asyncio.DatagramProtocol):
 
                 elif header == 0xAC:
                     logging.info(f"[START] From {addr} → idx={idx}, x={x:.6f}, y={y:.6f}, z={z:.6f}")
-                    cot = generate_goal_cot(idx, x, y, z)
+                    cot = generate_start_cot(idx, x, y, z)
 
                 else:
                     logging.warning(f"[UNKNOWN HEADER] {header} from {addr}")

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import asyncio, time, csv, os, sys, logging, tempfile
+import asyncio, time, csv, os, sys, logging, tempfile, queue  # add queue
+from typing import Optional  # 3.8-compatible Optional[]
 from collections import defaultdict
 from cot_utils import generate_chat_cot, generate_gps_cot, generate_obstacle_cot
 
@@ -33,7 +34,7 @@ NODATA_MSG = os.getenv("NODATA_MSG", "(No new data) No telemetry/control updates
 def _now() -> float:
     return time.time()
 
-def _iso(ts: float | None) -> str | None:
+def _iso(ts: Optional[float]) -> Optional[str]:
     """Format epoch seconds into ISO8601 with millisecond precision, UTC."""
     if ts is None:
         return None
@@ -51,7 +52,7 @@ _DEFAULT_CSV_PATH = os.path.join(_LOGDIR, f"{_PROG}_{_RUN_TS}.csv")
 
 class _CSVLogger:
     """CSV logger that writes one row per outbound CoT (chat/pos/nodata)."""
-    def __init__(self, path: str | None = None):
+    def __init__(self, path: Optional[str] = None):
         self.path = path or _DEFAULT_CSV_PATH
         self._init()
 
@@ -118,89 +119,94 @@ class _CSVLogger:
 
 LOGGER = _CSVLogger()  # Module-level singleton
 
-async def handle_queue_data(q, tx_queue):
+async def handle_queue_data(q, tx_queue, metrics_q=None):
     """
-    Pull from multiprocessing.Queue, update latest_* states for workers,
-    and bump “new data” counters.
+    Pull from multiprocessing.Queue using a blocking get() in a worker thread
+    (run_in_executor), so it's reliable (no empty() race) and doesn't block the
+    asyncio loop. Compatible with Python 3.8.
     """
     gear_map = {0: "Neutral", 1: "Forward", 2: "Reverse"}
     engine_map = {0: "Stopped", 1: "Running", 2: "Cranking", 3: "Fault"}
     ctrl_map = {0: "Inactive", 1: "Active", 2: "Takeover", 3: "E-Stop"}
     drive_map = {0: "Port", 1: "Starboard"}
 
+    loop = asyncio.get_running_loop()
+
     while True:
-        if not q.empty():
-            msg_type, data = q.get()
-            t = _now()
-            _last_rx[msg_type] = t
+        try:
+            # Run blocking q.get(timeout=1.0) in thread pool (3.8-safe)
+            msg_type, data = await loop.run_in_executor(None, q.get, True, 1.0)
+        except queue.Empty:
+            await asyncio.sleep(0)  # yield control; BundlerWorker handles "no data" message
+            continue
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logging.exception(f"[handle_queue_data] queue read error: {e}")
+            await asyncio.sleep(0.1)
+            continue
 
-            # Mark that a new message arrived
-            global RX_COUNTER, GPS_COUNTER, LAST_ANY_RX_TS
-            RX_COUNTER += 1
-            LAST_ANY_RX_TS = t
+        t = _now()
+        _last_rx[msg_type] = t
 
-            if msg_type == "gps":
-                latency_ms = data.get("latency_ms")
-                seq   = data.get("seq")
-                stamp = data.get("stamp")      # sender-side timestamp
-                lat   = data.get("lat")
-                lon   = data.get("lon")
+        # mark new data (for Bundler/GPS workers)
+        global RX_COUNTER, GPS_COUNTER, LAST_ANY_RX_TS
+        RX_COUNTER += 1
+        LAST_ANY_RX_TS = t
 
-                latency_str = f", Latency={latency_ms:.1f} ms" if isinstance(latency_ms, (int, float)) else ""
-                latest_msgs['gps'] = f"[GPS] Seq={seq}, Time={stamp:.3f}, Lat={lat:.6f}, Lon={lon:.6f}{latency_str}"
+        if msg_type == "gps":
+            latency_ms = data.get("latency_ms")
+            seq   = data.get("seq")
+            stamp = data.get("stamp")
+            lat   = data.get("lat")
+            lon   = data.get("lon")
 
-                latest_gps['lat'] = lat
-                latest_gps['lon'] = lon
-                latest_state["gps"].update({"seq": seq, "stamp": stamp, "latency_ms": latency_ms})
+            latency_str = f", Latency={latency_ms:.1f} ms" if isinstance(latency_ms, (int, float)) else ""
+            latest_msgs['gps'] = f"[GPS] Seq={seq}, Time={stamp:.3f}, Lat={lat:.6f}, Lon={lon:.6f}{latency_str}"
 
-                GPS_COUNTER += 1  # Only increment for GPS
+            latest_gps['lat'] = lat
+            latest_gps['lon'] = lon
+            latest_state["gps"].update({"seq": seq, "stamp": stamp, "latency_ms": latency_ms})
+            GPS_COUNTER += 1
 
-            elif msg_type == "vel":
-                seq = data.get("seq")
-                linear_x = data.get("linear_x")
-                latest_msgs['vel'] = f"[VEL] Seq={seq}, LinearX={linear_x:.3f}"
-                latest_state["vel"].update({"seq": seq, "linear_x": linear_x})
+        elif msg_type == "vel":
+            seq = data.get("seq")
+            linear_x = data.get("linear_x")
+            latest_msgs['vel'] = f"[VEL] Seq={seq}, LinearX={linear_x:.3f}"
+            latest_state["vel"].update({"seq": seq, "linear_x": linear_x})
 
-            elif msg_type == "can":
-                if "gear" in data:
-                    latest_msgs['can'] = (
-                        f"[CAN] Drive: {drive_map.get(data.get('driveLine'), '?')}, "
-                        f"Ctrl: {ctrl_map.get(data.get('externalControl'), '?')}, "
-                        f"Engine: {engine_map.get(data.get('engineState'), '?')}, "
-                        f"Gear: {gear_map.get(data.get('gear'), '?')}, "
-                        f"Throttle: {data.get('throttle')}%, "
-                        f"Steering: {data.get('steering')}"
-                    )
-                    latest_state["can"].update({
-                        "throttle": data.get("throttle"),
-                        "steering": data.get("steering"),
-                        "gear": data.get("gear"),
-                        "engineState": data.get("engineState"),
-                        "externalControl": data.get("externalControl"),
-                        "driveLine": data.get("driveLine"),
-                    })
-                else:
-                    latest_msgs['can'] = f"[CAN] Throttle={data.get('throttle')}, Steering={data.get('steering')}"
-                    latest_state["can"].update({
-                        "throttle": data.get("throttle"),
-                        "steering": data.get("steering"),
-                    })
+        elif msg_type == "can":
+            if "gear" in data:
+                latest_msgs['can'] = (
+                    f"[CAN] Drive: {drive_map.get(data.get('driveLine'), '?')}, "
+                    f"Ctrl: {ctrl_map.get(data.get('externalControl'), '?')}, "
+                    f"Engine: {engine_map.get(data.get('engineState'), '?')}, "
+                    f"Gear: {gear_map.get(data.get('gear'), '?')}, "
+                    f"Throttle: {data.get('throttle')}%, "
+                    f"Steering: {data.get('steering')}"
+                )
+                latest_state["can"].update({
+                    "throttle": data.get("throttle"),
+                    "steering": data.get("steering"),
+                    "gear": data.get("gear"),
+                    "engineState": data.get("engineState"),
+                    "externalControl": data.get("externalControl"),
+                    "driveLine": data.get("driveLine"),
+                })
+            else:
+                latest_msgs['can'] = f"[CAN] Throttle={data.get('throttle')}, Steering={data.get('steering')}"
+                latest_state["can"].update({
+                    "throttle": data.get("throttle"),
+                    "steering": data.get("steering"),
+                })
 
-            elif msg_type == "hdg":
-                heading = data.get("heading")
-                latest_msgs['hdg'] = f"[HDG] Heading={heading:.2f}°"
-                latest_state["hdg"].update({"heading": heading})
+        elif msg_type == "hdg":
+            heading = data.get("heading")
+            latest_msgs['hdg'] = f"[HDG] Heading={heading:.2f}°"
+            latest_state["hdg"].update({"heading": heading})
 
-            # If you need pose/obstacle, extend here:
-            # elif msg_type == "pose":
-            #     idx = data.get("index")
-            #     x, y, z = data.get("x"), data.get("y"), data.get("z")
-            #     latest_msgs[f'obstacle{idx}'] = f"[OBS] idx={idx} x={x:.2f}, y={y:.2f}, z={z:.2f}"
-            #     cot_msg = generate_obstacle_cot(idx, x, y, z)
-            #     logging.info("Sending:\n%s", cot_msg.decode())
-            #     await tx_queue.put(cot_msg)
-
-        await asyncio.sleep(0.01)
+        # elif msg_type == "pose":
+        #     ...
 
 def _ages_ms(now_s: float):
     """Return age_ms for each message type (time since last receive)."""
@@ -264,7 +270,7 @@ class BundlerWorker:
                 self._last_rx_counter_seen = current_counter
 
             else:
-                # No new data → send a single-line “no new data” message (do not resend last content)
+                # No new data → send a single-line message (do not resend last content)
                 nodata_text = NODATA_MSG
                 if LAST_ANY_RX_TS is not None:
                     gap = now_s - LAST_ANY_RX_TS
