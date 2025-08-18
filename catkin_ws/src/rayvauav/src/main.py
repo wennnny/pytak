@@ -7,7 +7,7 @@ from multiprocessing import Queue, Process
 from udp_listener_async_49152 import listener_worker
 from udp_listener_async_49153 import ObstacleUDPWorker
 from workers import handle_queue_data, BundlerWorker, GPSMemberWorker, MyReceiver
-
+from metrics import PerSecondTxLogger
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,11 +29,11 @@ async def main():
     clitool = pytak.CLITool(config)
     await clitool.setup()
 
-    queue = Queue()
-    listener_process = Process(target=listener_worker, args=(queue,))
+    mp_queue = Queue()
+    listener_process = Process(target=listener_worker, args=(mp_queue,))
     listener_process.start()
 
-    parser_task = asyncio.create_task(handle_queue_data(queue, clitool.tx_queue))
+    parser_task = asyncio.create_task(handle_queue_data(mp_queue, clitool.tx_queue))  # ← 刪掉第三個參數
 
     clitool.add_tasks({
         BundlerWorker(clitool.tx_queue),
@@ -44,9 +44,8 @@ async def main():
 
     try:
         await asyncio.gather(clitool.run(), parser_task)
-    finally:
-        listener_process.terminate()
-        listener_process.join()
+    except Exception as e:
+        logging.error("Error occurred: %s", e)
 
 if __name__ == "__main__":
     try:
