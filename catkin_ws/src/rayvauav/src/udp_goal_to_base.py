@@ -31,8 +31,8 @@ def main():
     UDP_TARGET_IP = rospy.get_param("~target_ip", "10.0.0.80")
     UDP_TARGET_PORT = rospy.get_param("~udp_port", 49153)
 
-    rospy.Subscriber("/goal/gps/pose_array", PoseArray, posearray_callback)
-    rospy.loginfo(f"Listening to /goal/gps/pose_array and sending each Pose via UDP to {UDP_TARGET_IP}:{UDP_TARGET_PORT}...")
+    rospy.Subscriber("/goal_list/gps/pose_array", PoseArray, posearray_callback)
+    rospy.loginfo(f"Listening to /goal_list/gps/pose_array and sending each Pose via UDP to {UDP_TARGET_IP}:{UDP_TARGET_PORT}...")
     rospy.spin()
 
 if __name__ == "__main__":

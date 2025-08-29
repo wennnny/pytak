@@ -6,7 +6,7 @@
     <arg name="send_pose" default="true" />
     <arg name="send_goal" default="true" />
 
-    <arg name="target_ip" default="10.0.0.8" />
+    <arg name="target_ip" default="192.168.133.15" />
     <arg name="receive_ip" default="0.0.0.0" />
     <arg name="gps_port" default="49152" />
     <arg name="vel_port" default="49152" />

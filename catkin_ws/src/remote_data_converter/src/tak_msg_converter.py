@@ -16,7 +16,7 @@ class TakMsgConverter:
         self.origin = None 
 
         # Subscribe Detected Obstacles pose in marker array
-        rospy.Subscriber("/visualization_marker_array", MarkerArray, self.marker_callback) # /js/detr/future/markers
+        rospy.Subscriber("/js/real/future/markers", MarkerArray, self.marker_callback) # /js/detr/future/markers
         self.obs_marker_pose = None
         
         # Subscribe Goal Point Pose

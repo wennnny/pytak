@@ -33,3 +33,7 @@ redis-server/
 __pycache__
 .ipynb_checkpoints/
 config.ini
+.catkin_tools/
+catkin_ws/devel/
+catkin_ws/logs/
+*.pem
