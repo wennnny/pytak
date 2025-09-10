@@ -10,12 +10,17 @@ IMG="${REPOSITORY}:${TAG}"
 USER_NAME="moos-dawg"
 REPO_NAME="pytak"
 CONTAINER_NAME="moos-dawg-2024-ubuntu20.04-gpu"
+if [ $# -gt 0 ]; then
+  CMD=(bash -c "$*; exec bash")
+else
+  CMD=(bash)
+fi
 
 CONTAINER_ID=$(docker ps -aqf "ancestor=${IMG}")
 if [ $CONTAINER_ID ]; then
   echo "Attach to docker container $CONTAINER_ID"
   xhost +
-  docker exec --privileged -e DISPLAY=${DISPLAY} -e LINES="$(tput lines)" -it ${CONTAINER_ID} bash
+  docker exec --privileged -e DISPLAY=${DISPLAY} -e LINES="$(tput lines)" -it ${CONTAINER_ID} "${CMD[@]}"
   xhost -
   return
 fi
@@ -63,6 +68,6 @@ docker run \
   --privileged \
   --security-opt seccomp=unconfined \
   "${IMG}" \
-  bash
+  "${CMD[@]}"
 
 # -e "TERM=xterm-256color" \
