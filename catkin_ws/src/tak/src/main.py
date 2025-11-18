@@ -8,7 +8,7 @@ import math
 import pytak
 import rospy
 from sensor_msgs.msg import NavSatFix
-from geometry_msgs.msg import PoseArray, Pose
+from geometry_msgs.msg import PoseArray, Pose, PoseStamped
 from std_msgs.msg import Header
 
 from cot_utils import generate_gps_cot, generate_goal_cot, generate_obstacle_cot
@@ -22,7 +22,7 @@ R_EARTH = 6378137.0  # m，地球半徑
 LAT0_RAD = math.radians(LAT_ORIGIN)
 
 # === ROS Topics ===
-GPS_TOPIC       = "/mavros/global_position/global"
+GPS_TOPIC       = "/gazebo/js/gps_pose"
 GOAL_TOPIC      = "/goal/gps/pose_array"                 # ROS -> TAK
 OBSTACLE_TOPIC  = "/detected_obstacles/gps/pose_array"   # ROS -> TAK
 
@@ -30,13 +30,13 @@ OBSTACLE_TOPIC  = "/detected_obstacles/gps/pose_array"   # ROS -> TAK
 WAYPOINT_POSEARRAY_TOPIC       = "/waypoint/global_position"
 WAYPOINT_LOCAL_POSEARRAY_TOPIC = "/waypoint/local_position"   # ⭐ 新增：相對位置
 OBSTACLE_POSEARRAY_TOPIC       = "/obstacle/global_position"
-
+0
 # === TAK 連線設定 ===
 TAK_CFG = {
     "COT_URL": "tls://140.113.148.80:8089",
-    "PYTAK_TLS_CLIENT_CERT": "/home/moos-dawg/pytak/catkin_ws/key/argtest2_cert.pem",
-    "PYTAK_TLS_CLIENT_KEY": "/home/moos-dawg/pytak/catkin_ws/key/argtest2_key.pem",
-    "PYTAK_TLS_CA_CERT": "/home/moos-dawg/pytak/catkin_ws/key/argtest2-trusted.pem",
+    "PYTAK_TLS_CLIENT_CERT": "/home/moos-dawg/Downloads/pytak/catkin_ws/files_WAN/argtest2_cert.pem",
+    "PYTAK_TLS_CLIENT_KEY": "/home/moos-dawg/Downloads/pytak/catkin_ws/files_WAN/argtest2_key.pem",
+    "PYTAK_TLS_CA_CERT": "/home/moos-dawg/Downloads/pytak/catkin_ws/files_WAN/argtest2-trusted.pem",
     "PYTAK_TLS_DONT_CHECK_HOSTNAME": "1",
     "PYTAK_TLS_DONT_VERIFY": "1",
 }
@@ -75,13 +75,27 @@ def latlon_to_local(lat: float, lon: float):
 # ============================================================
 # ROS Callbacks（ROS → TAK）
 # ============================================================
-def gps_callback(msg: NavSatFix):
-    latest_gps["lat"] = msg.latitude
-    latest_gps["lon"] = msg.longitude
-    latest_gps["hae"] = msg.altitude
+# def gps_callback(msg: NavSatFix):
+#     latest_gps["lat"] = msg.latitude
+#     latest_gps["lon"] = msg.longitude
+#     latest_gps["hae"] = msg.altitude
+#     print(
+#         f"[gps_callback] GPS lat={msg.latitude:.7f}, "
+#         f"lon={msg.longitude:.7f}, hae={msg.altitude:.2f}"
+#     )
+
+def gps_callback(msg: PoseStamped):
+    lat = msg.pose.position.x
+    lon = msg.pose.position.y
+    hae = msg.pose.position.z  # 目前是 0，如果之後要高度可以改
+
+    latest_gps["lat"] = lat
+    latest_gps["lon"] = lon
+    latest_gps["hae"] = hae
+
     print(
-        f"[gps_callback] GPS lat={msg.latitude:.7f}, "
-        f"lon={msg.longitude:.7f}, hae={msg.altitude:.2f}"
+        f"[gps_callback] JS GPS lat={lat:.7f}, "
+        f"lon={lon:.7f}, hae={hae:.2f}"
     )
 
 
@@ -387,7 +401,7 @@ def init_ros():
     rospy.init_node("tak_ros_node", anonymous=True)
 
     # ROS → TAK
-    rospy.Subscriber(GPS_TOPIC,      NavSatFix,  gps_callback)
+    rospy.Subscriber(GPS_TOPIC,      PoseStamped,  gps_callback)
     rospy.Subscriber(GOAL_TOPIC,     PoseArray, goal_callback)
     rospy.Subscriber(OBSTACLE_TOPIC, PoseArray, obstacle_callback)
 
