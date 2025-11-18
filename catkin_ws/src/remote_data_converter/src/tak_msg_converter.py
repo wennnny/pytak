@@ -23,6 +23,14 @@ class TakMsgConverter:
         rospy.Subscriber("/move_base_simple/goal", PoseStamped, self.goal_callback)
         self.goal_pose = None
 
+        # Subscribe Local Goal Pose List Array
+        rospy.Subscriber("/pinned_pose_array", PoseArray, self.goal_list_callback)
+        self.goal_list_array = None
+
+        # Subscribe Start Point Pose Array
+        rospy.Subscriber("/start_point_arr", PoseArray, self.start_point_callback)
+        self.start_point_pose_array = None
+
         # Subscribe Goal GPS List from TAK
         rospy.Subscriber("/waypoint/udp_global_position", PoseArray, self.goal_gps_callback)
 
@@ -35,6 +43,12 @@ class TakMsgConverter:
 
         # Publish Goal GPS Pose (2TAK)
         self.goal_gps_pub = rospy.Publisher("/goal/gps/pose_array", PoseArray, queue_size=10)   
+
+        # Publish Goal GPS Pose (2TAK)
+        self.goal_list_gps_pub = rospy.Publisher("/goal_list/gps/pose_array", PoseArray, queue_size=10)  
+
+        # Publish Start Point Pose Array (2TAK)
+        self.start_point_pub = rospy.Publisher("/start_point/gps/pose_array", PoseArray, queue_size=10)
 
         # Publish Goal pose array store in pinned_pose_array
         self.pinned_array_pub = rospy.Publisher("/pinned_pose_array", PoseArray, queue_size=10)
@@ -124,6 +138,53 @@ class TakMsgConverter:
             self.goal_pose = [lat, lon]
             rospy.loginfo(f"Goal GPS coordinates: {self.goal_pose}")
     
+    def goal_list_callback(self, data):
+        """ Convert Goal Pose Array to GPS coordinates and publish PoseArray """
+        if self.origin is None:
+            rospy.logwarn("No Home Position received yet!")
+            return
+
+        pose_array = PoseArray()
+        pose_array.header.stamp = rospy.Time.now()
+        pose_array.header.frame_id = "map"
+
+        for pose in data.poses:
+            gps_pos = self.convert_local_to_gps(pose.position.x, pose.position.y)
+            if gps_pos:
+                lat, lon = gps_pos
+                new_pose = Pose()
+                new_pose.position.x = lat
+                new_pose.position.y = lon
+                new_pose.position.z = 0.0
+                new_pose.orientation.w = 1.0
+                pose_array.poses.append(new_pose)
+        
+        self.goal_list_array = pose_array
+        self.goal_list_gps_pub.publish(pose_array)
+        rospy.loginfo(f"Published goal list poses in GPS coordinates: {len(pose_array.poses)}")
+
+    def start_point_callback(self, data):
+        """ Convert Start Point Pose Array to GPS coordinates and publish PoseArray """
+        if self.origin is None:
+            rospy.logwarn("No Home Position received yet!")
+            return
+
+        pose_array = PoseArray()
+        pose_array.header.stamp = rospy.Time.now()
+        pose_array.header.frame_id = "map"
+
+        for pose in data.poses:
+            local_pos = self.convert_gps_to_local(pose.position.x, pose.position.y)
+            if local_pos:
+                new_pose = Pose()
+                new_pose.position.x, new_pose.position.y = local_pos
+                new_pose.position.z = 0.0
+                new_pose.orientation.w = 1.0
+                pose_array.poses.append(new_pose)
+
+        self.start_point_pose_array = pose_array
+        rospy.loginfo(f"Published start point poses in GPS coordinates: {len(pose_array.poses)}")
+
     def timer_callback(self, event):
         """ Timer callback to publish goal GPS coordinates """
         if self.goal_pose is not None:
@@ -149,8 +210,18 @@ class TakMsgConverter:
         else:
             rospy.logwarn("No detected obs pose set yet!")
 
-        
-    
+        if self.start_point_pose_array is not None:
+            self.start_point_pub.publish(self.start_point_pose_array)
+            rospy.loginfo(f"Published start point GPS coordinates")
+        else:
+            rospy.logwarn("No start point pose set yet!")
+
+        # if self.goal_list_array is not None:
+        #     self.goal_list_gps_pub.publish(self.goal_list_array)
+        #     rospy.loginfo(f"Published goal list GPS coordinates")
+        # else:
+        #     rospy.logwarn("No goal list pose set yet!")
+
     def goal_gps_callback(self, data):
         """ Convert GPS coordinates to Local Pose and publish PoseArray """
         if self.origin is None:
