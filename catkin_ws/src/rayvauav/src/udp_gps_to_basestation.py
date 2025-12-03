@@ -36,8 +36,8 @@ def main():
     UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
     UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
 
-    rospy.Subscriber("/mavros/global_position/raw/fix", NavSatFix, gps_callback)
-    rospy.loginfo("Listening to /mavros/global_position/raw/fix and sending UDP packets...")
+    rospy.Subscriber("/fix", NavSatFix, gps_callback)
+    rospy.loginfo("Listening to /fix and sending UDP packets...")
     rospy.spin()
 
 if __name__ == "__main__":

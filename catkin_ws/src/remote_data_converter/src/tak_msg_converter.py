@@ -12,7 +12,7 @@ class TakMsgConverter:
         
         ##### Subscriber #####
         # Subscribe Home Position
-        rospy.Subscriber("/mavros/home_position/home", HomePosition, self.home_callback)
+        rospy.Subscriber("/js/home_position", Pose, self.home_callback)
         self.origin = None 
 
         # Subscribe Detected Obstacles pose in marker array
@@ -62,8 +62,8 @@ class TakMsgConverter:
 
     def home_callback(self, msg):
         """ Set MAVROS home_position to origin"""
-        self.origin = (msg.geo.latitude, msg.geo.longitude)
-        rospy.loginfo(f"Set origin: lat={msg.geo.latitude}, lon={msg.geo.longitude}")
+        self.origin = (msg.position.x, msg.position.y)
+        rospy.loginfo(f"Set origin: lat={msg.position.x}, lon={msg.position.y}")
 
     def convert_local_to_gps(self, x, y):
         """

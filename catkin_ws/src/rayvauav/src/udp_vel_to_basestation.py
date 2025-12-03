@@ -31,8 +31,8 @@ def main():
     UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
     UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
 
-    rospy.Subscriber("/mavros/local_position/velocity_body", TwistStamped, velocity_callback)
-    rospy.loginfo("Subscribing to /mavros/local_position/velocity_body and sending linear.x via UDP...")
+    rospy.Subscriber("/vel", TwistStamped, velocity_callback)
+    rospy.loginfo("Subscribing to /vel and sending linear.x via UDP...")
     rospy.spin()
 
 if __name__ == '__main__':
