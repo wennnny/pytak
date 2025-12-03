@@ -1,4 +1,7 @@
 .vscode/
+*.log
+*.csv
+*.bag
 *.deb
 *.egg
 *.egg-info/
@@ -37,3 +40,9 @@ config.ini
 catkin_ws/devel/
 catkin_ws/logs/
 *.pem
+catkin_ws/src/tak/src/choose_internet
+*.csr
+*.key
+*.crt
+*.p12
+*.jks
