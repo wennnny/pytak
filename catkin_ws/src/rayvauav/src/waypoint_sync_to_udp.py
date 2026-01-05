@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import asyncio, struct, time
-import socket
+import asyncio, struct, time, socket
 import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta   # ← 新增
 from configparser import ConfigParser
 import pytak
 
@@ -16,12 +16,7 @@ WAYPOINT_HEADER = 0xAF
 OBSTACLE_HEADER = 0xB0
 END = 0xC0
 
-# 是否在封包中附帶傳送端時間戳（UNIX seconds, float64）
 INCLUDE_TS = True
-
-# payload 長度說明：
-# - 原始: index(1B) + lat(8B) + lon(8B) + hae(8B) = 25
-# - 加上 timestamp(8B) 後 = 33
 PACKET_LENGTH_NO_TS = 25
 PACKET_LENGTH_WITH_TS = 33
 
@@ -30,32 +25,19 @@ obstacle_buffer = []
 
 def parse_cot(xml_data):
     root = ET.fromstring(xml_data)
-
     event_type = root.get("type", "Unknown")
-
     point = root.find("point")
     lat = float(point.get("lat", 0)) if point is not None else 0.0
     lon = float(point.get("lon", 0)) if point is not None else 0.0
     hae = float(point.get("hae", 0)) if point is not None else 0.0
-
     contact = root.find("./detail/contact")
     callsign = contact.get("callsign", "Unknown") if contact is not None else "Unknown"
-
     return callsign, event_type, lat, lon, hae
 
 def send_udp(index: int, lat: float, lon: float, hae: float, header: int):
-    """
-    封包格式 (little-endian):
-      不含時間戳:
-        < B   B       B     d     d     d    B >
-          hdr len(payload) idx   lat   lon   hae  END
-      含時間戳:
-        < B   B       B     d     d     d     d      B >
-          hdr len(payload) idx   lat   lon   hae  ts(sec) END
-    """
     if INCLUDE_TS:
         payload_len = PACKET_LENGTH_WITH_TS
-        ts = float(time.time())  # 傳送瞬間的 UNIX 秒
+        ts = time.time()  # 系統時間 (UNIX 秒)
         pack_fmt = "<BBBddddB"
         packet = struct.pack(pack_fmt, header, payload_len, index, lat, lon, hae, ts, END)
     else:
@@ -65,8 +47,14 @@ def send_udp(index: int, lat: float, lon: float, hae: float, header: int):
 
     udp_sock.sendto(packet, (UDP_TARGET_IP, UDP_TARGET_PORT))
     label = "WAYPOINT" if header == WAYPOINT_HEADER else "OBSTACLE"
+
     if INCLUDE_TS:
-        print(f"[UDP] Sent {label}{index}: lat={lat:.6f}, lon={lon:.6f}, hae={hae:.2f}, ts={ts:.3f}")
+        twt = (datetime.utcfromtimestamp(ts) + timedelta(hours=8)).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        print(
+            f"[UDP] Sent {label}{index}: "
+            f"lat={lat:.6f}, lon={lon:.6f}, hae={hae:.2f}, "
+            f"ts={ts:.6f} ({twt} TWT)"
+        )
     else:
         print(f"[UDP] Sent {label}{index}: lat={lat:.6f}, lon={lon:.6f}, hae={hae:.2f}")
 
