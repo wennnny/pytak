@@ -1,0 +1,10 @@
+<launch>
+    <!-- Set the namespace for the nodes -->
+    <arg name="callsign" default="GoingJetSea" />
+
+    <node name="send_obstacle_position" pkg="tak" type="GetWaypointFromCot.py" output="screen" />
+
+    <node name="send_device_position" pkg="tak" type="SendDevicePosition.py" output="screen">
+        <param name="callsign" value="$(arg callsign)" />
+    </node>
+</launch>

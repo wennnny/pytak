@@ -6,9 +6,27 @@ import time
 UDP_IP = "0.0.0.0"
 UDP_PORT = 49152
 
+def to_seconds(stamp):
+    """
+    將時間戳推斷為秒：
+    - ~1e9 量級：秒 (Unix epoch seconds)
+    - ~1e12：毫秒
+    - ~1e15：微秒
+    - ~1e18：奈秒
+    """
+    if stamp > 1e16:   # ns
+        return stamp / 1e9
+    elif stamp > 1e13: # us
+        return stamp / 1e6
+    elif stamp > 1e11: # ms
+        return stamp / 1e3
+    else:              # s
+        return stamp
+
 def parse_packet(data):
     try:
         if len(data) == 31 and data[0] == 0xAA:
+            # header, len, seq(uint32), stamp(double), lat(double), lon(double), end
             _, _, seq, stamp, lat, lon, _ = struct.unpack('<BBIdddB', data)
             return "gps", {"seq": seq, "stamp": stamp, "lat": lat, "lon": lon}
 
@@ -29,7 +47,8 @@ def parse_packet(data):
             }
 
         elif len(data) == 5 and data[0] == 0xAC:
-            _, _, b6, b7, _ = struct.unpack('<BB2BB', data)
+            # header, len, throttle, steering, end
+            h, l, b6, b7, e = struct.unpack('<BBBBB', data)
             return "can", {"throttle": b6, "steering": b7}
 
         elif len(data) == 11 and data[0] == 0xAD:
@@ -55,16 +74,15 @@ def listener_worker(q: Queue):
 
     while True:
         data, addr = sock.recvfrom(1024)
-        # print(f"[RECV] {len(data)} bytes from {addr}: {data.hex()}")
         msg_type, parsed = parse_packet(data)
-        q.put((msg_type, parsed))  # 非同步寫入共享 Queue
 
+        # === 在接收端計算 latency（只對帶有 stamp 的 GPS 做） ===
+        if msg_type == "gps" and "stamp" in parsed:
+            recv_time = time.time()
+            sent_s   = to_seconds(parsed["stamp"])
+            latency  = recv_time - sent_s  # 可能為負，代表兩端時鐘未完全對齊
+            parsed["recv_time"]  = recv_time
+            parsed["latency_s"]  = latency
+            parsed["latency_ms"] = latency * 1000.0
 
-
-
-# 資料	    Header	 Port	 Payload
-# GPS	    0xAA	49152	seq + timestamp + lat/lon
-# Velocity	0xAB	49152	seq + linear.x
-# CAN	    0xAC	49152	b6 + b7
-# Compass	0xAD	49152	float64 (heading)
-# PoseArray 0xAE	49152	index + x + y + z
+        q.put((msg_type, parsed))

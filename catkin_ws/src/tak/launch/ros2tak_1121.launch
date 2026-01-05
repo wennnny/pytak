@@ -1,0 +1,15 @@
+<launch>
+
+    <!-- 1. 搖桿 -->
+    <node pkg="joy" type="joy_node" name="joy_node" output="screen" />
+
+    <!-- 2. thrust 程式（確定檔案已在 pkg 的 scripts/ 中） -->
+    <node pkg="tak" type="twist2thrust_h_moos.py" name="twist2thrust" output="screen" />
+
+    <!-- 3. main.py -->
+    <node pkg="tak" type="main.py" name="tak_main" output="screen" />
+
+    <!-- 4. 資料轉換器（假設屬於 remote_data pkg） -->
+    <node pkg="remote_data_converter" type="tak_msg_converter_JS1_copy.py" name="converter_js1" output="screen" />
+
+</launch>

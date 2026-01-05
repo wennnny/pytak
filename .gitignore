@@ -1,4 +1,7 @@
 .vscode/
+*.log
+*.csv
+*.bag
 *.deb
 *.egg
 *.egg-info/
@@ -33,3 +36,10 @@ redis-server/
 __pycache__
 .ipynb_checkpoints/
 config.ini
+catkin_ws/src/tak/src/choose_internet
+*.csr
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
