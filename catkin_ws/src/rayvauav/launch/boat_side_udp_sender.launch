@@ -3,9 +3,9 @@
     <arg name="send_vel" default="true" />
     <arg name="send_can" default="true" />
     <arg name="send_hdg" default="true" />
-    <arg name="send_pose" default="true" />
-    <arg name="send_goal" default="true" />
-    <arg name="send_start" default="true" />
+    <arg name="send_pose" default="false" />
+    <arg name="send_goal" default="false" />
+    <arg name="send_start" default="false" />
 
     <arg name="target_ip" default="192.168.133.15" />
     <arg name="receive_ip" default="0.0.0.0" />
@@ -19,7 +19,7 @@
 
     <!-- Data about the USV -->
 
-    <node if="$(arg send_gps)" pkg="rayvauav" type="udp_gps_to_basestation_1.py" name="gps_udp_sender" output="screen">
+    <node if="$(arg send_gps)" pkg="rayvauav" type="udp_gps_to_basestation.py" name="gps_udp_sender" output="screen">
         <param name="udp_port" value="$(arg gps_port)" />
         <param name="target_ip" value="$(arg target_ip)" />
     </node>
