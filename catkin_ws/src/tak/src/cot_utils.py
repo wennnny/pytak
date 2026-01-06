@@ -98,49 +98,61 @@ def generate_obstacle_cot(idx, x, y, z):
     return ET.tostring(root)
 
 # === Generate goalpoint CoT ===
-def generate_goal_cot(idx, lat, lon, hae):
+def generate_goal_cot(idx, lat, lon, hae=99):
     cfg = cot_config["goalpoint"]
     root = ET.Element("event")
     root.set("version", cfg["event"]["version"])
     root.set("type", cfg["event"]["type"])
-    root.set("uid", f"goalpoint-{idx}")
+    root.set("uid", f"goalpoint-{idx}") # 確保多個目標點時 UID 不同
     root.set("how", cfg["event"]["how"])
     root.set("time", pytak.cot_time())
     root.set("start", pytak.cot_time())
     root.set("stale", pytak.cot_time(cfg["event"]["stale_seconds"]))
+
     ET.SubElement(root, "point", {
         "lat": str(lat), "lon": str(lon), "hae": str(hae),
         "ce": "999999", "le": "999999"
     })
+
     detail = ET.SubElement(root, "detail")
-    ET.SubElement(detail, "takv", {"device": DEVICE_CALLSIGN, "platform": "Python", "os": DEVICE_OS})
-    ET.SubElement(detail, "contact", {"callsign": f"goalpoint-{idx}"})
+    # 設定名稱為 "目標點"
+    ET.SubElement(detail, "contact", {"callsign": f"目標點-{idx}"})
     ET.SubElement(detail, "__group", cfg["detail"]["group"])
-    ET.SubElement(detail, "uid", {"Droid": cfg["detail"]["uid"]})
+    
+    # 這裡加入您要求的 Google/blu-blank.png 圖示
     ET.SubElement(detail, "usericon", {"iconsetpath": cfg["detail"]["iconsetpath"]})
-    ET.SubElement(detail, "color", {"argb": cfg["detail"]["color"]})
+    
+    # 其他 TAK 必要的標記
+    takv_attr = {"device": "Python-Bridge", "platform": "ROS", "os": platform.system(), "version": "1.0"}
+    ET.SubElement(detail, "takv", takv_attr)
+    
     return ET.tostring(root)
 
 # === Generate start CoT ===
-def generate_start_cot(idx, lat, lon, hae):
+def generate_start_cot(idx, lat, lon, hae=99):
     cfg = cot_config["startpoint"]
+    now = pytak.cot_time() # 統一名稱與開始時間，避免 TAK 顯示延遲
+    
     root = ET.Element("event")
     root.set("version", cfg["event"]["version"])
     root.set("type", cfg["event"]["type"])
     root.set("uid", f"startpoint-{idx}")
     root.set("how", cfg["event"]["how"])
-    root.set("time", pytak.cot_time())
-    root.set("start", pytak.cot_time())
+    root.set("time", now)
+    root.set("start", now)
     root.set("stale", pytak.cot_time(cfg["event"]["stale_seconds"]))
+
     ET.SubElement(root, "point", {
         "lat": str(lat), "lon": str(lon), "hae": str(hae),
         "ce": "999999", "le": "999999"
     })
+
     detail = ET.SubElement(root, "detail")
-    ET.SubElement(detail, "takv", {"device": DEVICE_CALLSIGN, "platform": "Python", "os": DEVICE_OS})
-    ET.SubElement(detail, "contact", {"callsign": f"startpoint-{idx}"})
-    ET.SubElement(detail, "__group", cfg["detail"]["group"])
-    ET.SubElement(detail, "uid", {"Droid": cfg["detail"]["uid"]})
-    ET.SubElement(detail, "usericon", {"iconsetpath": cfg["detail"]["iconsetpath"]})
-    ET.SubElement(detail, "color", {"argb": cfg["detail"]["color"]})
+    ET.SubElement(detail, "contact", {"callsign": f"�點-{idx}"}) # 名稱修改為起點
+    ET.SubElement(detail, "usericon", {"iconsetpath": cfg["detail"]["iconsetpath"]}) # 使用 pink-blank.png
+    
+    takv_attr = {"device": DEVICE_CALLSIGN, "platform": "Python", "os": DEVICE_OS}
+    ET.SubElement(detail, "takv", takv_attr)
+    
     return ET.tostring(root)
+
