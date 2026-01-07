@@ -1,0 +1,8 @@
+<launch>
+    <!-- Set the namespace for the nodes -->
+    
+    <node name="tak_msg_converter" pkg="remote_data_converter" type="tak_msg_converter.py" output="screen" />
+    <node name="tak_to_ros" pkg="tak" type="TakToRosBridge.py" output="screen" />
+    <node name="send_all_position" pkg="tak" type="SendAllPosition.py" output="screen" />
+
+</launch>
