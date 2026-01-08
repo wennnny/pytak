@@ -13,7 +13,7 @@ TARGET_IP = "192.168.133.15"
 TARGET_PORT = 49154
 
 # nc 監聽的 port（跟你平常打的 nc -lk 13550 一樣）
-NC_PORT = 13550
+NC_PORT = 13551
 
 # 全域變數
 send_sock = None
@@ -436,7 +436,7 @@ TARGET_IP = "192.168.133.15"
 TARGET_PORT = 49154
 
 # nc 監聽的 port（跟你平常打的 nc -lk 13550 一樣）
-NC_PORT = 13550
+NC_PORT = 13551
 
 # 全域變數
 send_sock = None

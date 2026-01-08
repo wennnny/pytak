@@ -46,3 +46,4 @@ catkin_ws/src/tak/src/choose_internet
 *.crt
 *.p12
 *.jks
+log
