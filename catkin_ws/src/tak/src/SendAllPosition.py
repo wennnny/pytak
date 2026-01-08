@@ -19,7 +19,7 @@ class MySerializer(pytak.QueueWorker):
         self.latest_starts = []
         
         # ROS 訂閱
-        rospy.Subscriber("/mavros/global_position/global", NavSatFix, self.gps_callback)
+        rospy.Subscriber("/fix", NavSatFix, self.gps_callback)
         rospy.Subscriber("/detected_obstacles/gps/pose_array", PoseArray, self.obstacle_callback)
         rospy.Subscriber("/goal/gps/pose_array", PoseArray, self.goal_callback)
         rospy.Subscriber("/start_point/gps/pose_array", PoseArray, self.start_callback)

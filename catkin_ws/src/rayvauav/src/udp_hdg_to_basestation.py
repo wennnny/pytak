@@ -26,8 +26,8 @@ def main():
     UDP_TARGET_IP = rospy.get_param("~target_ip", "140.113.148.80")
     UDP_TARGET_PORT = rospy.get_param("~udp_port", 49152)
 
-    rospy.Subscriber("/lt500/heading_true_deg", Float64, compass_callback)
-    rospy.loginfo("Listening to /lt500/heading_true_deg and sending via UDP...")
+    rospy.Subscriber("/kc1400/heading", Float64, compass_callback)
+    rospy.loginfo("Listening to /kc1400/heading and sending via UDP...")
     rospy.spin()
 
 if __name__ == "__main__":

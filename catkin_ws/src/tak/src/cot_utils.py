@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import pytak
 import json, os, math
 
-config_path = os.path.expanduser("~/Downloads/pytak/catkin_ws/src/tak/src/cot_config.json")
+config_path = os.path.expanduser("~/pytak/catkin_ws/src/tak/src/cot_config.json")
 with open(config_path, "r") as f:
     cot_config = json.load(f)
 

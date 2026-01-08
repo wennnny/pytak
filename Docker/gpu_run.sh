@@ -48,7 +48,6 @@ fi
 docker run \
   -it \
   --rm \
-  --runtime=nvidia \
   -e DISPLAY \
   -e XAUTHORITY=$XAUTH \
   -e HOME=/home/${USER_NAME} \
