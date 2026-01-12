@@ -5,6 +5,10 @@ from visualization_msgs.msg import MarkerArray
 from mavros_msgs.msg import HomePosition
 from geometry_msgs.msg import PoseStamped, PoseArray, Pose
 
+# ===== 固定 Home Position 原點設定 =====
+LAT_ORIGIN = 22.580602
+LON_ORIGIN = 120.296392
+
 class TakMsgConverter:
     def __init__(self):
         rospy.init_node("tak_msg_converter", anonymous=True)
@@ -32,7 +36,7 @@ class TakMsgConverter:
         self.start_point_pose_array = None
 
         # Subscribe Goal GPS List from TAK
-        rospy.Subscriber("/waypoint/udp_global_position", PoseArray, self.goal_gps_callback)
+        rospy.Subscriber("/waypoint/udp_global_position", PoseArray, self.goal_gps_callback_fix)
 
         # Subscribe Virtual Obstacles GPS List from TAK
         rospy.Subscriber("/obstacle/udp_global_position", PoseArray, self.virtual_obstacles_callback)
@@ -55,6 +59,9 @@ class TakMsgConverter:
 
         # Publish Virtual Obstacles PoseArray store in buoy_pose_array
         self.buoy_pose_array_pub = rospy.Publisher("/buoy_pose_array", PoseArray, queue_size=10)
+
+        # Publish Goal pose arry (2Moos) with fix home pos
+        self.tak_waypoint_pub = rospy.Publisher("/tak_waypoint", PoseArray, queue_size=10)
 
         # Timer
         self.timer = rospy.Timer(rospy.Duration(1.0), self.timer_callback)
@@ -95,10 +102,26 @@ class TakMsgConverter:
             return None
         
         R = 6378137.0  # Earth radius in meters
-        lat0, lon0 = self.origin
+        lat0, lon0 = LAT_ORIGIN, LON_ORIGIN
         dLat = np.radians(lat - lat0)
         dLon = np.radians(lon - lon0)
         avgLat = np.radians(lat0)
+        x = R * dLon * np.cos(avgLat)
+        y = R * dLat
+        return x, y
+
+    def convert_gps_to_local_fix(self, lat, lon):
+        """
+        Convert GPS (lat, lon) to Local Pose (x, y)
+        with fixed origin (LAT_ORIGIN, LON_ORIGIN)
+        """
+        R = 6378137.0
+        lat0, lon0 = self.origin
+
+        dLat = np.radians(lat - lat0)
+        dLon = np.radians(lon - lon0)
+        avgLat = np.radians(lat0)
+
         x = R * dLon * np.cos(avgLat)
         y = R * dLat
         return x, y
@@ -138,6 +161,49 @@ class TakMsgConverter:
             self.goal_pose = [lat, lon]
             rospy.loginfo(f"Goal GPS coordinates: {self.goal_pose}")
     
+    def goal_gps_callback_fix(self, data: PoseArray):
+        """
+        同時處理兩種轉換：
+        1. 使用固定原點 -> /tak_waypoint
+        2. 使用 MAVROS 原點 -> /pinned_pose_array (若有原點)
+        """
+        if len(data.poses) == 0:
+            rospy.logwarn("No GPS data received!")
+            return
+
+        # 準備兩個容器
+        fixed_pose_array = PoseArray()
+        dynamic_pose_array = PoseArray()
+        
+        fixed_pose_array.header = dynamic_pose_array.header = data.header
+        fixed_pose_array.header.frame_id = "map"
+
+        for pose in data.poses:
+            # --- 邏輯 A: 固定原點轉換 (必做) ---
+            fx, fy = self.convert_gps_to_local_fix(pose.position.x, pose.position.y)
+            f_pose = Pose()
+            f_pose.position.x, f_pose.position.y = fx, fy
+            f_pose.orientation.w = 1.0
+            fixed_pose_array.poses.append(f_pose)
+
+            # --- 邏輯 B: 動態原點轉換 (若 self.origin 存在才做) ---
+            if self.origin is not None:
+                dx, dy = self.convert_gps_to_local(pose.position.x, pose.position.y)
+                d_pose = Pose()
+                d_pose.position.x, d_pose.position.y = dx, dy
+                d_pose.orientation.w = 1.0
+                dynamic_pose_array.poses.append(d_pose)
+
+        # 發佈到固定原點的 Topic
+        self.tak_waypoint_pub.publish(fixed_pose_array)
+        
+        # 若有動態原點資料，則發佈到原有的 Topic
+        if self.origin is not None:
+            self.pinned_array_pub.publish(dynamic_pose_array)
+            rospy.loginfo(f"Processed {len(data.poses)} points to both Fixed and Dynamic origins.")
+        else:
+            rospy.loginfo(f"Processed {len(data.poses)} points to Fixed origin only (Waiting for Home).")
+
     def goal_list_callback(self, data):
         """ Convert Goal Pose Array to GPS coordinates and publish PoseArray """
         if self.origin is None:
