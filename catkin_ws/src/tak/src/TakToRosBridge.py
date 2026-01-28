@@ -137,10 +137,10 @@ async def main():
     # TAK Server 設定
     config = ConfigParser()
     config["mycottool"] = {
-        "COT_URL": "tls://140.113.148.80:8089",
-        "PYTAK_TLS_CLIENT_CERT": "/home/moos-dawg/pytak/catkin_ws/key/argtest2_cert.pem",
-        "PYTAK_TLS_CLIENT_KEY": "/home/moos-dawg/pytak/catkin_ws/key/argtest2_key.pem",
-        "PYTAK_TLS_CA_CERT": "/home/moos-dawg/pytak/catkin_ws/key/argtest2-trusted.pem",
+        "COT_URL": "tls://192.168.133.16:8089",
+        "PYTAK_TLS_CLIENT_CERT": "/home/moos-dawg/pytak/catkin_ws/JS/files/client_3_cert.pem",
+        "PYTAK_TLS_CLIENT_KEY": "/home/moos-dawg/pytak/catkin_ws/JS/files/client_3_key.pem",
+        "PYTAK_TLS_CA_CERT": "/home/moos-dawg/pytak/catkin_ws//JS/files/client_3-trusted.pem",
         "PYTAK_TLS_DONT_CHECK_HOSTNAME": "1",
         "PYTAK_TLS_DONT_VERIFY": "1"
     }

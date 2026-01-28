@@ -3,8 +3,8 @@ import sys
 import socket
 
 # 你 Unity 的 IP & Port
-FORWARD_IP = "127.0.0.1"
-FORWARD_PORT = 13551
+FORWARD_IP = "192.168.133.15"
+FORWARD_PORT = 49154
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 

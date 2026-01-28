@@ -9,10 +9,10 @@
 
     <arg name="target_ip" default="192.168.133.15" />
     <arg name="receive_ip" default="0.0.0.0" />
-    <arg name="gps_port" default="49152" />
-    <arg name="vel_port" default="49152" />
-    <arg name="can_port" default="49152" />
-    <arg name="hdg_port" default="49152" />
+    <arg name="gps_port" default="49162" />
+    <arg name="vel_port" default="49162" />
+    <arg name="can_port" default="49162" />
+    <arg name="hdg_port" default="49162" />
     <arg name="pose_port" default="49152" />
     <arg name="waypoint_port" default="49157" />
     <arg name="moos_command_port" default="49158" />
