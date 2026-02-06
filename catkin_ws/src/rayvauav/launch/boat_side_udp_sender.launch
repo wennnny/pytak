@@ -41,7 +41,7 @@
 
     <!-- zyxel to basestation udp sender -->
 
-    <node pkg="rayvauav" type="udp_zyxel_to_basestation.py" name="udp_zyxel_sender" output="screen" />
+    <!-- <node pkg="rayvauav" type="udp_zyxel_to_basestation.py" name="udp_zyxel_sender" output="screen" /> -->
 
     <!-- Obstacle position and pose data -->
 
@@ -71,5 +71,8 @@
         <param name="udp_port" value="$(arg moos_command_port)" />
         <param name="udp_ip" value="$(arg receive_ip)" />
     </node> -->
+
+    <node pkg="rayvauav" type="udp2joy_jssc_v2.py" name="udp2joy_bridge" output="screen" />
+    <node pkg="rayvauav" type="udp_topic_bridge.py" name="udp_topic_bridge" output="screen" />
     
 </launch>
